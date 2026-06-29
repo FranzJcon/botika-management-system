@@ -36,6 +36,17 @@ enum StockInStatus {
   CANCELLED
 }
 
+enum StockReferenceType {
+  INVOICE
+  DELIVERY_RECEIPT
+  OFFICIAL_RECEIPT
+  PURCHASE_ORDER
+  MANUAL
+  OPENING_INVENTORY
+  DONATION
+  OTHER
+}
+
 enum InventoryBatchStatus {
   AVAILABLE
   DEPLETED
@@ -269,7 +280,8 @@ model StockIn {
   receivedByUserId String            @map("received_by_user_id") @db.Uuid
   importJobId      String?           @map("import_job_id") @db.Uuid
   sourceType       StockInSourceType @map("source_type")
-  invoiceNumber    String?           @map("invoice_number")
+  referenceType    StockReferenceType? @map("reference_type")
+  referenceNumber  String?           @map("reference_number")
   receivedDate     DateTime          @map("received_date") @db.Date
   notes            String?
   status           StockInStatus     @default(DRAFT)
