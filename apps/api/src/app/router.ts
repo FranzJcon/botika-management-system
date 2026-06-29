@@ -1,5 +1,6 @@
 import { Router } from "express";
 
+import { brandRoutes } from "../modules/brands";
 import { categoryRoutes } from "../modules/categories";
 import { dosageFormRoutes } from "../modules/dosage-forms";
 import { genericDrugRoutes } from "../modules/generic-drugs";
@@ -8,6 +9,7 @@ import { productClassificationRoutes } from "../modules/product-classifications"
 
 export const router = Router();
 
+router.use("/brands", brandRoutes);
 router.use("/categories", categoryRoutes);
 router.use("/dosage-forms", dosageFormRoutes);
 router.use("/generic-drugs", genericDrugRoutes);
