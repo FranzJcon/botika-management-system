@@ -1,0 +1,17 @@
+export const brands = [
+  { name: "Biogesic", description: "Common local medicine brand" },
+  { name: "Neozep", description: "Common local cold medicine brand" },
+  { name: "Solmux", description: "Common local cough medicine brand" },
+  { name: "Tempra", description: "Common local fever medicine brand" },
+  { name: "Alaxan", description: "Common local pain relief brand" },
+  { name: "Tuseran", description: "Common local cough and cold brand" },
+  { name: "Decolgen", description: "Common local cold medicine brand" },
+  { name: "Diatabs", description: "Common local antidiarrheal brand" },
+  { name: "Kremil-S", description: "Common local antacid brand" },
+  { name: "Ceelin", description: "Common local vitamin brand" },
+  { name: "Enervon", description: "Common local multivitamin brand" },
+  { name: "Pampers", description: "Baby care brand" },
+  { name: "Johnson's", description: "Personal and baby care brand" },
+  { name: "Selecta", description: "Frozen goods and beverage brand" },
+  { name: "Bear Brand", description: "Beverage and nutrition brand" },
+];
