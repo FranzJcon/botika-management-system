@@ -140,11 +140,27 @@ model GenericDrug {
   @@map("generic_drugs")
 }
 
+model DosageForm {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  products Product[]
+
+  @@index([name])
+  @@index([isActive])
+  @@map("dosage_forms")
+}
+
 model Product {
   id                   String        @id @default(uuid()) @db.Uuid
   categoryId           String?       @map("category_id") @db.Uuid
   classificationId     String?       @map("classification_id") @db.Uuid
   genericDrugId        String?       @map("generic_drug_id") @db.Uuid
+  dosageFormId         String?       @map("dosage_form_id") @db.Uuid
   sku                  String?       @unique
   name                 String
   /// Legacy/free-text generic name used by existing data and imports. Prefer genericDrugId for normalized active ingredients.
@@ -166,6 +182,7 @@ model Product {
   category Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   classification ProductClassification? @relation(fields: [classificationId], references: [id], onDelete: SetNull)
   genericDrug GenericDrug? @relation(fields: [genericDrugId], references: [id], onDelete: SetNull)
+  dosageFormRef DosageForm? @relation(fields: [dosageFormId], references: [id], onDelete: SetNull)
   aliases  ProductAlias[]
   barcodes ProductBarcode[]
   stockInItems         StockInItem[]
@@ -179,6 +196,7 @@ model Product {
   @@index([categoryId])
   @@index([classificationId])
   @@index([genericDrugId])
+  @@index([dosageFormId])
   @@index([name])
   @@index([genericName])
   @@index([brandName])
