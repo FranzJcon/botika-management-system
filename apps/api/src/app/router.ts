@@ -8,6 +8,7 @@ import { healthRoutes } from "../modules/health";
 import { inventoryLevelRoutes } from "../modules/inventory-levels";
 import { productRoutes } from "../modules/products";
 import { productClassificationRoutes } from "../modules/product-classifications";
+import { stockAdjustmentRoutes } from "../modules/stock-adjustments";
 import { stockInRoutes } from "../modules/stock-ins";
 
 export const router = Router();
@@ -20,4 +21,5 @@ router.use("/health", healthRoutes);
 router.use("/inventory-levels", inventoryLevelRoutes);
 router.use("/products", productRoutes);
 router.use("/product-classifications", productClassificationRoutes);
+router.use("/stock-adjustments", stockAdjustmentRoutes);
 router.use("/stock-ins", stockInRoutes);
