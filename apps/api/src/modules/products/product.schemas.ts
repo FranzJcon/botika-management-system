@@ -29,5 +29,17 @@ export const updateProductSchema = createProductSchema.partial().extend({
   status: z.enum(["ACTIVE", "INACTIVE", "DISCONTINUED"]).optional(),
 });
 
+export const createProductAliasSchema = z.object({
+  alias: z.string().trim().min(1),
+});
+
+export const createProductBarcodeSchema = z.object({
+  barcode: z.string().trim().min(1),
+});
+
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
+export type CreateProductAliasInput = z.infer<typeof createProductAliasSchema>;
+export type CreateProductBarcodeInput = z.infer<
+  typeof createProductBarcodeSchema
+>;

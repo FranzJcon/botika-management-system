@@ -1,11 +1,20 @@
 import { prisma } from "../../lib/prisma";
 
-import type { CreateProductInput, UpdateProductInput } from "./product.schemas";
+import type {
+  CreateProductAliasInput,
+  CreateProductBarcodeInput,
+  CreateProductInput,
+  UpdateProductInput,
+} from "./product.schemas";
 
 export type ProductServiceError =
   | "PRODUCT_NOT_FOUND"
   | "PRODUCT_RELATION_NOT_FOUND"
-  | "SKU_ALREADY_EXISTS";
+  | "SKU_ALREADY_EXISTS"
+  | "ALIAS_NOT_FOUND"
+  | "ALIAS_ALREADY_EXISTS"
+  | "BARCODE_NOT_FOUND"
+  | "BARCODE_ALREADY_EXISTS";
 
 type ProductServiceResult<T> =
   | {
@@ -227,6 +236,184 @@ export const archiveProduct = async (
   return {
     data: {
       message: "Product archived successfully",
+    },
+  };
+};
+
+export const getProductAliases = async (
+  productId: string,
+): Promise<ProductServiceResult<Awaited<ReturnType<typeof prisma.productAlias.findMany>>>> => {
+  if (!(await productExists(productId))) {
+    return { error: "PRODUCT_NOT_FOUND" };
+  }
+
+  const aliases = await prisma.productAlias.findMany({
+    where: {
+      productId,
+    },
+    orderBy: {
+      alias: "asc",
+    },
+  });
+
+  return { data: aliases };
+};
+
+export const createProductAlias = async (
+  productId: string,
+  input: CreateProductAliasInput,
+): Promise<ProductServiceResult<Awaited<ReturnType<typeof prisma.productAlias.create>>>> => {
+  if (!(await productExists(productId))) {
+    return { error: "PRODUCT_NOT_FOUND" };
+  }
+
+  const existingAlias = await prisma.productAlias.findFirst({
+    where: {
+      productId,
+      alias: {
+        equals: input.alias,
+        mode: "insensitive",
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (existingAlias) {
+    return { error: "ALIAS_ALREADY_EXISTS" };
+  }
+
+  const alias = await prisma.productAlias.create({
+    data: {
+      productId,
+      alias: input.alias,
+    },
+  });
+
+  return { data: alias };
+};
+
+export const deleteProductAlias = async (
+  productId: string,
+  aliasId: string,
+): Promise<ProductServiceResult<{ message: string }>> => {
+  if (!(await productExists(productId))) {
+    return { error: "PRODUCT_NOT_FOUND" };
+  }
+
+  const alias = await prisma.productAlias.findFirst({
+    where: {
+      id: aliasId,
+      productId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!alias) {
+    return { error: "ALIAS_NOT_FOUND" };
+  }
+
+  await prisma.productAlias.delete({
+    where: {
+      id: alias.id,
+    },
+  });
+
+  return {
+    data: {
+      message: "Alias removed successfully",
+    },
+  };
+};
+
+export const getProductBarcodes = async (
+  productId: string,
+): Promise<
+  ProductServiceResult<Awaited<ReturnType<typeof prisma.productBarcode.findMany>>>
+> => {
+  if (!(await productExists(productId))) {
+    return { error: "PRODUCT_NOT_FOUND" };
+  }
+
+  const barcodes = await prisma.productBarcode.findMany({
+    where: {
+      productId,
+    },
+    orderBy: {
+      barcode: "asc",
+    },
+  });
+
+  return { data: barcodes };
+};
+
+export const createProductBarcode = async (
+  productId: string,
+  input: CreateProductBarcodeInput,
+): Promise<
+  ProductServiceResult<Awaited<ReturnType<typeof prisma.productBarcode.create>>>
+> => {
+  if (!(await productExists(productId))) {
+    return { error: "PRODUCT_NOT_FOUND" };
+  }
+
+  const existingBarcode = await prisma.productBarcode.findUnique({
+    where: {
+      barcode: input.barcode,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (existingBarcode) {
+    return { error: "BARCODE_ALREADY_EXISTS" };
+  }
+
+  const barcode = await prisma.productBarcode.create({
+    data: {
+      productId,
+      barcode: input.barcode,
+    },
+  });
+
+  return { data: barcode };
+};
+
+export const deleteProductBarcode = async (
+  productId: string,
+  barcodeId: string,
+): Promise<ProductServiceResult<{ message: string }>> => {
+  if (!(await productExists(productId))) {
+    return { error: "PRODUCT_NOT_FOUND" };
+  }
+
+  const barcode = await prisma.productBarcode.findFirst({
+    where: {
+      id: barcodeId,
+      productId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!barcode) {
+    return { error: "BARCODE_NOT_FOUND" };
+  }
+
+  await prisma.productBarcode.delete({
+    where: {
+      id: barcode.id,
+    },
+  });
+
+  return {
+    data: {
+      message: "Barcode removed successfully",
     },
   };
 };
