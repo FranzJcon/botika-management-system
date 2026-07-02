@@ -61,13 +61,20 @@ export const createStockAdjustmentHandler = async (
   req: Request,
   res: Response,
 ) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
   const result = createStockAdjustmentSchema.safeParse(req.body);
 
   if (!result.success) {
     return validationFailed(res);
   }
 
-  const stockAdjustment = await createStockAdjustment(result.data);
+  const stockAdjustment = await createStockAdjustment({
+    ...result.data,
+    adjustedByUserId: req.user.id,
+  });
 
   if (stockAdjustment.error) {
     return sendServiceError(

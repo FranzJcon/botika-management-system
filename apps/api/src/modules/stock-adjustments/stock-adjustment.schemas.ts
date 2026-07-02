@@ -4,7 +4,6 @@ const optionalUuid = z.string().uuid().nullable().optional();
 const optionalText = z.string().trim().min(1).nullable().optional();
 
 export const createStockAdjustmentSchema = z.object({
-  adjustedByUserId: z.string().uuid(),
   reason: z.string().trim().min(1),
   notes: optionalText,
   items: z
@@ -21,4 +20,6 @@ export const createStockAdjustmentSchema = z.object({
 
 export type CreateStockAdjustmentInput = z.infer<
   typeof createStockAdjustmentSchema
->;
+> & {
+  adjustedByUserId: string;
+};

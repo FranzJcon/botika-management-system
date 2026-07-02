@@ -4,9 +4,9 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
   app,
   cleanupTestData,
+  createAuthenticatedTestUser,
   createProduct,
   createStockInDraft,
-  createTestUser,
   prisma,
   quantityOf,
 } from "./helpers";
@@ -19,9 +19,9 @@ describe("stock in", () => {
   });
 
   it("posts a draft once, creates inventory and ledger entries, and rejects duplicate posting", async () => {
-    const user = await createTestUser();
+    const { token } = await createAuthenticatedTestUser();
     const product = await createProduct();
-    const stockIn = await createStockInDraft(product.id, user.id, 100);
+    const stockIn = await createStockInDraft(product.id, token, 100);
 
     await expect(
       prisma.inventoryBatch.findFirst({
@@ -31,7 +31,11 @@ describe("stock in", () => {
       }),
     ).resolves.toBeNull();
 
-    await request(app).post(`/stock-ins/${stockIn.id}/post`).send({}).expect(200);
+    await request(app)
+      .post(`/stock-ins/${stockIn.id}/post`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({})
+      .expect(200);
 
     const batch = await prisma.inventoryBatch.findFirstOrThrow({
       where: {
@@ -49,7 +53,11 @@ describe("stock in", () => {
     });
     expect(ledgerEntry).not.toBeNull();
 
-    await request(app).post(`/stock-ins/${stockIn.id}/post`).send({}).expect(409);
+    await request(app)
+      .post(`/stock-ins/${stockIn.id}/post`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({})
+      .expect(409);
 
     await expect(
       prisma.inventoryBatch.count({
@@ -61,9 +69,9 @@ describe("stock in", () => {
   });
 
   it("rolls back failed posting without creating inventory or ledger records", async () => {
-    const user = await createTestUser();
+    const { token } = await createAuthenticatedTestUser();
     const product = await createProduct();
-    const stockIn = await createStockInDraft(product.id, user.id, 100);
+    const stockIn = await createStockInDraft(product.id, token, 100);
 
     await prisma.stockInItem.deleteMany({
       where: {
@@ -71,7 +79,11 @@ describe("stock in", () => {
       },
     });
 
-    await request(app).post(`/stock-ins/${stockIn.id}/post`).send({}).expect(409);
+    await request(app)
+      .post(`/stock-ins/${stockIn.id}/post`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({})
+      .expect(409);
 
     await expect(
       prisma.inventoryBatch.count({

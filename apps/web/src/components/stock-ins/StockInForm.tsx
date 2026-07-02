@@ -23,8 +23,6 @@ type StockInFormProps = {
   onSubmit: (payload: CreateStockInPayload) => Promise<void>;
 };
 
-const receivedByUserId = import.meta.env.VITE_STOCK_IN_RECEIVED_BY_USER_ID ?? "";
-
 const today = () => new Date().toISOString().slice(0, 10);
 
 const createItem = (): StockInItemFormValues => ({
@@ -51,7 +49,6 @@ const optionalText = (value: string) => value.trim() || null;
 
 const toPayload = (values: StockInFormValues): CreateStockInPayload => ({
   supplierId: null,
-  receivedByUserId,
   sourceType: values.sourceType,
   referenceType: values.referenceType || null,
   referenceNumber: optionalText(values.referenceNumber),
@@ -116,10 +113,6 @@ export function StockInForm({
   };
 
   const validate = () => {
-    if (!receivedByUserId) {
-      return "Missing VITE_STOCK_IN_RECEIVED_BY_USER_ID configuration.";
-    }
-
     if (!values.receivedDate) {
       return "Received date is required.";
     }

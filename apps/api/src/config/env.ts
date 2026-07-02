@@ -13,4 +13,6 @@ const parsePort = (value: string | undefined) => {
 export const env = {
   port: parsePort(process.env.PORT),
   nodeEnv: process.env.NODE_ENV ?? "development",
+  jwtSecret: process.env.JWT_SECRET ?? "botika-development-secret",
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "1d",
 };

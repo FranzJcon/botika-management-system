@@ -63,7 +63,6 @@ export type StockInFormValues = {
 
 export type CreateStockInPayload = {
   supplierId: null;
-  receivedByUserId: string;
   sourceType: StockInSourceType;
   referenceType?: StockReferenceType | null;
   referenceNumber?: string | null;

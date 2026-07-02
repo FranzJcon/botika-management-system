@@ -1,4 +1,5 @@
 import request from "supertest";
+import bcrypt from "bcrypt";
 
 import { createApp } from "../src/app/app";
 import { prisma } from "../src/lib/prisma";
@@ -12,6 +13,8 @@ export const uniqueName = (name: string) =>
   `${testPrefix}-${name}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 export const quantityOf = (value: unknown) => Number(value);
+
+export const testPassword = "test-password";
 
 export const cleanupTestData = async () => {
   const products = await prisma.product.findMany({
@@ -97,11 +100,50 @@ export const createTestUser = async () =>
   prisma.user.create({
     data: {
       email: `${uniqueName("user").toLowerCase()}@example.com`,
-      passwordHash: "test-password-hash",
+      passwordHash: await bcrypt.hash(testPassword, 10),
       displayName: uniqueName("User"),
       role: "ADMIN",
     },
   });
+
+export const createAuthenticatedTestUser = async () => {
+  const user = await createTestUser();
+  const response = await request(app)
+    .post("/auth/login")
+    .send({
+      email: user.email,
+      password: testPassword,
+    })
+    .expect(200);
+
+  return {
+    user,
+    token: response.body.token as string,
+  };
+};
+
+export const upsertSeedAdminUser = async () => {
+  const passwordHash = await bcrypt.hash("admin123", 10);
+
+  return prisma.user.upsert({
+    where: {
+      email: "admin@botika.local",
+    },
+    update: {
+      passwordHash,
+      displayName: "Administrator",
+      role: "ADMIN",
+      isActive: true,
+    },
+    create: {
+      email: "admin@botika.local",
+      passwordHash,
+      displayName: "Administrator",
+      role: "ADMIN",
+      isActive: true,
+    },
+  });
+};
 
 export const createProduct = async (overrides: Record<string, unknown> = {}) => {
   const sku = uniqueName("SKU");
@@ -125,14 +167,14 @@ export const createProduct = async (overrides: Record<string, unknown> = {}) => 
 
 export const createStockInDraft = async (
   productId: string,
-  receivedByUserId: string,
+  authToken: string,
   quantity = 100,
 ) => {
   const response = await request(app)
     .post("/stock-ins")
+    .set("Authorization", `Bearer ${authToken}`)
     .send({
       supplierId: null,
-      receivedByUserId,
       sourceType: "MANUAL",
       referenceType: "MANUAL",
       referenceNumber: uniqueName("REF"),
@@ -155,11 +197,15 @@ export const createStockInDraft = async (
 };
 
 export const postStockInWithQuantity = async (quantity = 100) => {
-  const user = await createTestUser();
+  const { user, token } = await createAuthenticatedTestUser();
   const product = await createProduct();
-  const stockIn = await createStockInDraft(product.id, user.id, quantity);
+  const stockIn = await createStockInDraft(product.id, token, quantity);
 
-  await request(app).post(`/stock-ins/${stockIn.id}/post`).send({}).expect(200);
+  await request(app)
+    .post(`/stock-ins/${stockIn.id}/post`)
+    .set("Authorization", `Bearer ${token}`)
+    .send({})
+    .expect(200);
 
   const batch = await prisma.inventoryBatch.findFirstOrThrow({
     where: {
@@ -169,6 +215,7 @@ export const postStockInWithQuantity = async (quantity = 100) => {
 
   return {
     user,
+    token,
     product,
     stockIn,
     batch,

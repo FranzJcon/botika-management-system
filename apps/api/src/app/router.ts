@@ -1,5 +1,6 @@
 import { Router } from "express";
 
+import { authRoutes } from "../modules/auth";
 import { brandRoutes } from "../modules/brands";
 import { categoryRoutes } from "../modules/categories";
 import { dosageFormRoutes } from "../modules/dosage-forms";
@@ -14,6 +15,7 @@ import { stockInRoutes } from "../modules/stock-ins";
 
 export const router = Router();
 
+router.use("/auth", authRoutes);
 router.use("/brands", brandRoutes);
 router.use("/categories", categoryRoutes);
 router.use("/dosage-forms", dosageFormRoutes);

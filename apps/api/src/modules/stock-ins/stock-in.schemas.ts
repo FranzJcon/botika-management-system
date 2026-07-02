@@ -24,7 +24,6 @@ const dateString = z.string().refine(isValidDateString);
 
 export const createStockInSchema = z.object({
   supplierId: optionalUuid,
-  receivedByUserId: z.string().uuid(),
   sourceType: z.enum(["MANUAL", "EXCEL", "CSV", "OCR", "WO_POS_MIGRATION"]),
   referenceType: z
     .enum([
@@ -59,4 +58,6 @@ export const createStockInSchema = z.object({
 
 export const postStockInSchema = z.object({});
 
-export type CreateStockInInput = z.infer<typeof createStockInSchema>;
+export type CreateStockInInput = z.infer<typeof createStockInSchema> & {
+  receivedByUserId: string;
+};

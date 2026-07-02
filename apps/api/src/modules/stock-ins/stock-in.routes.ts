@@ -1,5 +1,6 @@
 import { Router } from "express";
 
+import { requireAuth } from "../../middleware/auth.middleware";
 import {
   createStockInHandler,
   getStockIn,
@@ -11,5 +12,5 @@ export const stockInRoutes = Router();
 
 stockInRoutes.get("/", listStockIns);
 stockInRoutes.get("/:id", getStockIn);
-stockInRoutes.post("/", createStockInHandler);
-stockInRoutes.post("/:id/post", postStockInHandler);
+stockInRoutes.post("/", requireAuth, createStockInHandler);
+stockInRoutes.post("/:id/post", requireAuth, postStockInHandler);

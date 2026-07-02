@@ -1,5 +1,6 @@
 import { Router } from "express";
 
+import { requireAuth } from "../../middleware/auth.middleware";
 import {
   createStockAdjustmentHandler,
   getStockAdjustment,
@@ -10,4 +11,4 @@ export const stockAdjustmentRoutes = Router();
 
 stockAdjustmentRoutes.get("/", listStockAdjustments);
 stockAdjustmentRoutes.get("/:id", getStockAdjustment);
-stockAdjustmentRoutes.post("/", createStockAdjustmentHandler);
+stockAdjustmentRoutes.post("/", requireAuth, createStockAdjustmentHandler);

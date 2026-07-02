@@ -18,12 +18,12 @@ describe("stock adjustments", () => {
   });
 
   it("reduces stock, creates ledger entries, and rejects adjustments below zero", async () => {
-    const { user, product, batch } = await postStockInWithQuantity(100);
+    const { token, product, batch } = await postStockInWithQuantity(100);
 
     await request(app)
       .post("/stock-adjustments")
+      .set("Authorization", `Bearer ${token}`)
       .send({
-        adjustedByUserId: user.id,
         reason: "Damaged items",
         notes: uniqueName("Adjustment"),
         items: [
@@ -56,8 +56,8 @@ describe("stock adjustments", () => {
 
     await request(app)
       .post("/stock-adjustments")
+      .set("Authorization", `Bearer ${token}`)
       .send({
-        adjustedByUserId: user.id,
         reason: "Physical count correction",
         notes: uniqueName("Adjustment"),
         items: [
@@ -79,7 +79,7 @@ describe("stock adjustments", () => {
   });
 
   it("rolls back a failed adjustment without partial records", async () => {
-    const { user, product, batch } = await postStockInWithQuantity(100);
+    const { token, product, batch } = await postStockInWithQuantity(100);
 
     const stockAdjustmentCountBefore = await prisma.stockAdjustment.count();
     const ledgerCountBefore = await prisma.stockLedgerEntry.count({
@@ -90,8 +90,8 @@ describe("stock adjustments", () => {
 
     await request(app)
       .post("/stock-adjustments")
+      .set("Authorization", `Bearer ${token}`)
       .send({
-        adjustedByUserId: user.id,
         reason: "Invalid adjustment",
         notes: uniqueName("Adjustment"),
         items: [

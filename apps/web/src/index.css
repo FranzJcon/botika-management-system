@@ -144,6 +144,8 @@ a {
   background: rgba(255, 255, 255, 0.88);
   border-bottom: 1px solid var(--border);
   display: flex;
+  justify-content: space-between;
+  gap: 18px;
   min-height: 82px;
   padding: 18px 32px;
 }
@@ -162,6 +164,51 @@ a {
 
 .app-content {
   padding: 32px;
+}
+
+.header-user {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.header-user span {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.login-page {
+  align-items: center;
+  background: var(--bg);
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.login-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 420px;
+  padding: 28px;
+  width: min(100%, 420px);
+}
+
+.login-card h1 {
+  font-size: 30px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.login-card p {
+  color: var(--text-muted);
+  margin: 6px 0 0;
 }
 
 .page {

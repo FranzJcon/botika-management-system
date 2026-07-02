@@ -68,13 +68,20 @@ export const getStockIn = async (req: Request, res: Response) => {
 };
 
 export const createStockInHandler = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
   const result = createStockInSchema.safeParse(req.body);
 
   if (!result.success) {
     return validationFailed(res);
   }
 
-  const stockIn = await createStockIn(result.data);
+  const stockIn = await createStockIn({
+    ...result.data,
+    receivedByUserId: req.user.id,
+  });
 
   if (stockIn.error) {
     return sendServiceError(res, stockIn.error);
@@ -84,6 +91,10 @@ export const createStockInHandler = async (req: Request, res: Response) => {
 };
 
 export const postStockInHandler = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
   const result = postStockInSchema.safeParse(req.body ?? {});
 
   if (!result.success) {

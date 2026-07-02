@@ -2,6 +2,7 @@ import "dotenv/config";
 
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcrypt";
 
 import { brands } from "./seed-data/brands";
 import { categories } from "./seed-data/categories";
@@ -147,9 +148,37 @@ const seedBrands = async (items: SeedItem[]) => {
   console.log(`Seeded ${items.length} brands.`);
 };
 
+const seedAdminUser = async () => {
+  console.log("Seeding admin user...");
+
+  const passwordHash = await bcrypt.hash("admin123", 10);
+
+  await prisma.user.upsert({
+    where: {
+      email: "admin@botika.local",
+    },
+    update: {
+      passwordHash,
+      displayName: "Administrator",
+      role: "ADMIN",
+      isActive: true,
+    },
+    create: {
+      email: "admin@botika.local",
+      passwordHash,
+      displayName: "Administrator",
+      role: "ADMIN",
+      isActive: true,
+    },
+  });
+
+  console.log("Seeded admin user.");
+};
+
 const main = async () => {
   console.log("Starting master reference data seed...");
 
+  await seedAdminUser();
   await seedCategories(categories);
   await seedProductClassifications(productClassifications);
   await seedDosageForms(dosageForms);

@@ -199,6 +199,7 @@ const definition = {
     description: "API documentation for the Botika Management System backend.",
   },
   tags: [
+    { name: "Auth" },
     { name: "Health" },
     { name: "Categories" },
     { name: "Product Classifications" },
@@ -214,7 +215,39 @@ const definition = {
     { name: "Sales" },
   ],
   components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+      },
+    },
     schemas: {
+      LoginRequest: {
+        type: "object",
+        properties: {
+          email: { type: "string", format: "email" },
+          password: { type: "string" },
+        },
+        required: ["email", "password"],
+      },
+      AuthUser: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          email: { type: "string", format: "email" },
+          displayName: { type: "string" },
+          role: { type: "string", enum: ["ADMIN", "STAFF"] },
+        },
+      },
+      LoginResponse: {
+        type: "object",
+        properties: {
+          token: { type: "string" },
+          user: ref("AuthUser"),
+        },
+        required: ["token", "user"],
+      },
       ErrorResponse: {
         type: "object",
         properties: {
@@ -375,7 +408,6 @@ const definition = {
         type: "object",
         properties: {
           supplierId: { type: "string", format: "uuid", nullable: true },
-          receivedByUserId: { type: "string", format: "uuid" },
           sourceType: {
             type: "string",
             enum: ["MANUAL", "EXCEL", "CSV", "OCR", "WO_POS_MIGRATION"],
@@ -399,7 +431,7 @@ const definition = {
           notes: { type: "string", nullable: true },
           items: arrayOf(ref("StockInItemRequest")),
         },
-        required: ["receivedByUserId", "sourceType", "receivedDate", "items"],
+        required: ["sourceType", "receivedDate", "items"],
       },
       StockInItemRequest: {
         type: "object",
@@ -430,12 +462,11 @@ const definition = {
       StockAdjustmentCreateRequest: {
         type: "object",
         properties: {
-          adjustedByUserId: { type: "string", format: "uuid" },
           reason: { type: "string" },
           notes: { type: "string", nullable: true },
           items: arrayOf(ref("StockAdjustmentItemRequest")),
         },
-        required: ["adjustedByUserId", "reason", "items"],
+        required: ["reason", "items"],
       },
       StockAdjustmentItemRequest: {
         type: "object",
@@ -468,6 +499,54 @@ const definition = {
     },
   },
   paths: {
+    "/auth/login": {
+      post: {
+        tags: ["Auth"],
+        summary: "Login with email and password",
+        requestBody: {
+          required: true,
+          ...json(ref("LoginRequest"), {
+            email: "admin@botika.local",
+            password: "admin123",
+          }),
+        },
+        responses: {
+          200: {
+            description: "Login successful",
+            ...json(ref("LoginResponse"), {
+              token: "jwt-token",
+              user: {
+                id: "00000000-0000-0000-0000-000000000000",
+                email: "admin@botika.local",
+                displayName: "Administrator",
+                role: "ADMIN",
+              },
+            }),
+          },
+          400: responses.validationFailed,
+          401: responses.notFound("Invalid credentials"),
+        },
+      },
+    },
+    "/auth/me": {
+      get: {
+        tags: ["Auth"],
+        summary: "Get the current authenticated user",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Current user",
+            ...json(ref("AuthUser"), {
+              id: "00000000-0000-0000-0000-000000000000",
+              email: "admin@botika.local",
+              displayName: "Administrator",
+              role: "ADMIN",
+            }),
+          },
+          401: responses.notFound("Unauthorized"),
+        },
+      },
+    },
     "/health": {
       get: {
         tags: ["Health"],
@@ -764,11 +843,11 @@ const definition = {
       post: {
         tags: ["Stock In"],
         summary: "Create stock-in draft",
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           ...json(ref("StockInCreateRequest"), {
             supplierId: null,
-            receivedByUserId: "00000000-0000-0000-0000-000000000000",
             sourceType: "MANUAL",
             referenceType: "MANUAL",
             referenceNumber: "DR-1001",
@@ -807,6 +886,7 @@ const definition = {
       post: {
         tags: ["Stock In"],
         summary: "Post a stock-in draft",
+        security: [{ bearerAuth: [] }],
         parameters: [idParam()],
         responses: {
           200: { description: "Stock-in posted", ...json({ type: "object" }) },
@@ -877,10 +957,10 @@ const definition = {
       post: {
         tags: ["Stock Adjustments"],
         summary: "Create and apply stock adjustment",
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           ...json(ref("StockAdjustmentCreateRequest"), {
-            adjustedByUserId: "00000000-0000-0000-0000-000000000000",
             reason: "Damaged items",
             notes: "Removed damaged stock",
             items: [
