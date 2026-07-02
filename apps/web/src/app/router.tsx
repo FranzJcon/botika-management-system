@@ -8,6 +8,7 @@ import { DosageFormsPage } from "../pages/DosageFormsPage";
 import { GenericDrugsPage } from "../pages/GenericDrugsPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { ProductClassificationsPage } from "../pages/ProductClassificationsPage";
+import { ProductsPage } from "../pages/ProductsPage";
 
 export const router = createBrowserRouter([
   {
@@ -36,6 +37,10 @@ export const router = createBrowserRouter([
       {
         path: "product-classifications",
         element: <ProductClassificationsPage />,
+      },
+      {
+        path: "products",
+        element: <ProductsPage />,
       },
       {
         path: "*",
