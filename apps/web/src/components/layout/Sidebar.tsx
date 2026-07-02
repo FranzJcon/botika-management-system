@@ -17,7 +17,7 @@ const navGroups: NavGroup[] = [
   {
     title: "Master Data",
     items: [
-      { label: "Categories", path: "/master-data/categories" },
+      { label: "Categories", path: "/categories" },
       {
         label: "Product Classifications",
         path: "/master-data/product-classifications",
