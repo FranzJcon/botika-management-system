@@ -2,22 +2,24 @@ import { Button } from "../ui/Button";
 
 type MasterDataPageHeaderProps = {
   title: string;
-  actionLabel: string;
-  onAction: () => void;
+  actionLabel?: string;
+  eyebrow?: string;
+  onAction?: () => void;
 };
 
 export function MasterDataPageHeader({
   actionLabel,
+  eyebrow = "Master Data",
   onAction,
   title,
 }: MasterDataPageHeaderProps) {
   return (
     <div className="page-heading">
       <div>
-        <p className="eyebrow">Master Data</p>
+        <p className="eyebrow">{eyebrow}</p>
         <h2>{title}</h2>
       </div>
-      <Button onClick={onAction}>{actionLabel}</Button>
+      {actionLabel && onAction ? <Button onClick={onAction}>{actionLabel}</Button> : null}
     </div>
   );
 }

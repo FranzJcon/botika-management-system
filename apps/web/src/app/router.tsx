@@ -7,6 +7,7 @@ import { CategoriesPage } from "../pages/CategoriesPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { DosageFormsPage } from "../pages/DosageFormsPage";
 import { GenericDrugsPage } from "../pages/GenericDrugsPage";
+import { InventoryLevelsPage } from "../pages/InventoryLevelsPage";
 import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { ProductClassificationsPage } from "../pages/ProductClassificationsPage";
@@ -56,6 +57,10 @@ export const router = createBrowserRouter([
       {
         path: "stock-ins",
         element: <StockInsPage />,
+      },
+      {
+        path: "inventory",
+        element: <InventoryLevelsPage />,
       },
       {
         path: "*",

@@ -400,6 +400,35 @@ a {
   padding: 18px;
 }
 
+.inventory-tabs {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  padding: 18px;
+}
+
+.inventory-tab {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 700;
+  min-height: 38px;
+  padding: 8px 14px;
+}
+
+.inventory-tab-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+.inventory-retry {
+  margin-left: auto;
+}
+
 .state-panel {
   color: var(--text-muted);
   padding: 34px 18px;
