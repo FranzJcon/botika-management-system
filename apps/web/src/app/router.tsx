@@ -9,6 +9,7 @@ import { GenericDrugsPage } from "../pages/GenericDrugsPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { ProductClassificationsPage } from "../pages/ProductClassificationsPage";
 import { ProductsPage } from "../pages/ProductsPage";
+import { StockInsPage } from "../pages/StockInsPage";
 
 export const router = createBrowserRouter([
   {
@@ -41,6 +42,10 @@ export const router = createBrowserRouter([
       {
         path: "products",
         element: <ProductsPage />,
+      },
+      {
+        path: "stock-ins",
+        element: <StockInsPage />,
       },
       {
         path: "*",
