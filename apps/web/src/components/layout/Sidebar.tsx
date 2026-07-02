@@ -24,7 +24,7 @@ const navGroups: NavGroup[] = [
       },
       { label: "Generic Drugs", path: "/master-data/generic-drugs" },
       { label: "Dosage Forms", path: "/master-data/dosage-forms" },
-      { label: "Brands", path: "/master-data/brands" },
+      { label: "Brands", path: "/brands" },
     ],
   },
   {
