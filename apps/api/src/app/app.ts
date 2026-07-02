@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 
+import { registerSwaggerDocs } from "../docs/swagger";
 import { router } from "./router";
 
 export const createApp = () => {
@@ -8,6 +9,8 @@ export const createApp = () => {
 
   app.use(express.json());
   app.use(cors());
+
+  registerSwaggerDocs(app);
 
   app.use(router);
 
