@@ -22,7 +22,7 @@ const navGroups: NavGroup[] = [
         label: "Product Classifications",
         path: "/master-data/product-classifications",
       },
-      { label: "Generic Drugs", path: "/master-data/generic-drugs" },
+      { label: "Generic Drugs", path: "/generic-drugs" },
       { label: "Dosage Forms", path: "/dosage-forms" },
       { label: "Brands", path: "/brands" },
     ],
