@@ -4,6 +4,7 @@ import { AppLayout } from "../components/layout/AppLayout";
 import { BrandsPage } from "../pages/BrandsPage";
 import { CategoriesPage } from "../pages/CategoriesPage";
 import { DashboardPage } from "../pages/DashboardPage";
+import { DosageFormsPage } from "../pages/DosageFormsPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 
 export const router = createBrowserRouter([
@@ -21,6 +22,10 @@ export const router = createBrowserRouter([
       {
         path: "brands",
         element: <BrandsPage />,
+      },
+      {
+        path: "dosage-forms",
+        element: <DosageFormsPage />,
       },
       {
         path: "*",
