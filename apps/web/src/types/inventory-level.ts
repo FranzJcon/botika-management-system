@@ -18,6 +18,8 @@ export type InventoryLevel = {
   sku: string | null;
   category: Category | null;
   brand: Brand | null;
+  genericDrug?: GenericDrug | null;
+  defaultSellingPrice?: string | number | null;
   totalQuantityOnHand: string | number;
   reorderLevel: string | number;
   status: ProductStatus;
