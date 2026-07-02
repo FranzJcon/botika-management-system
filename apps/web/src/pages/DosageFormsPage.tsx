@@ -1,11 +1,14 @@
 import { useState } from "react";
 
-import { DeleteDosageFormDialog } from "../components/dosage-forms/DeleteDosageFormDialog";
 import { DosageFormForm } from "../components/dosage-forms/DosageFormForm";
 import { DosageFormTable } from "../components/dosage-forms/DosageFormTable";
-import { Button } from "../components/ui/Button";
+import { DeleteConfirmationDialog } from "../components/master-data/DeleteConfirmationDialog";
+import { MasterDataEmptyState } from "../components/master-data/MasterDataEmptyState";
+import { MasterDataErrorState } from "../components/master-data/MasterDataErrorState";
+import { MasterDataLoadingState } from "../components/master-data/MasterDataLoadingState";
+import { MasterDataPageHeader } from "../components/master-data/MasterDataPageHeader";
+import { MasterDataToolbar } from "../components/master-data/MasterDataToolbar";
 import { Card } from "../components/ui/Card";
-import { Input } from "../components/ui/Input";
 import { useDosageForms } from "../hooks/useDosageForms";
 import type { DosageForm, DosageFormPayload } from "../types/dosage-form";
 
@@ -96,36 +99,25 @@ export function DosageFormsPage() {
 
   return (
     <section className="page">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">Master Data</p>
-          <h2>Dosage Forms</h2>
-        </div>
-        <Button onClick={openCreateForm}>+ New Dosage Form</Button>
-      </div>
+      <MasterDataPageHeader
+        actionLabel="+ New Dosage Form"
+        onAction={openCreateForm}
+        title="Dosage Forms"
+      />
 
       <Card className="content-card">
-        <div className="toolbar">
-          <Input
-            label="Search"
-            placeholder="Search dosage forms"
-            type="search"
-          />
-          {error ? (
-            <Button variant="secondary" onClick={() => void reload()}>
-              Retry
-            </Button>
-          ) : null}
-        </div>
+        <MasterDataToolbar
+          onRetry={() => void reload()}
+          searchPlaceholder="Search dosage forms"
+          showRetry={Boolean(error)}
+        />
 
         {isLoading ? (
-          <div className="state-panel">Loading dosage forms...</div>
+          <MasterDataLoadingState message="Loading dosage forms..." />
         ) : error ? (
-          <div className="state-panel error-state">{error}</div>
+          <MasterDataErrorState message={error} />
         ) : dosageForms.length === 0 ? (
-          <div className="state-panel">
-            No dosage forms yet. Create the first product form.
-          </div>
+          <MasterDataEmptyState message="No dosage forms yet. Create the first product form." />
         ) : (
           <DosageFormTable
             dosageForms={dosageForms}
@@ -146,12 +138,16 @@ export function DosageFormsPage() {
       ) : null}
 
       {dosageFormToArchive ? (
-        <DeleteDosageFormDialog
-          dosageForm={dosageFormToArchive}
+        <DeleteConfirmationDialog
+          confirmLabel="Archive Dosage Form"
           error={mutationError}
-          isSubmitting={isSubmitting}
+          loading={isSubmitting}
+          message="Products assigned to this dosage form will not be modified."
           onCancel={closeArchiveDialog}
           onConfirm={handleArchive}
+          targetDescription={dosageFormToArchive.description}
+          targetName={dosageFormToArchive.name}
+          title="Archive this dosage form?"
         />
       ) : null}
     </section>

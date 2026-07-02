@@ -7,6 +7,7 @@ import { DashboardPage } from "../pages/DashboardPage";
 import { DosageFormsPage } from "../pages/DosageFormsPage";
 import { GenericDrugsPage } from "../pages/GenericDrugsPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
+import { ProductClassificationsPage } from "../pages/ProductClassificationsPage";
 
 export const router = createBrowserRouter([
   {
@@ -31,6 +32,10 @@ export const router = createBrowserRouter([
       {
         path: "generic-drugs",
         element: <GenericDrugsPage />,
+      },
+      {
+        path: "product-classifications",
+        element: <ProductClassificationsPage />,
       },
       {
         path: "*",

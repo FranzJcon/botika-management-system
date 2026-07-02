@@ -1,11 +1,14 @@
 import { useState } from "react";
 
-import { DeleteGenericDrugDialog } from "../components/generic-drugs/DeleteGenericDrugDialog";
 import { GenericDrugForm } from "../components/generic-drugs/GenericDrugForm";
 import { GenericDrugTable } from "../components/generic-drugs/GenericDrugTable";
-import { Button } from "../components/ui/Button";
+import { DeleteConfirmationDialog } from "../components/master-data/DeleteConfirmationDialog";
+import { MasterDataEmptyState } from "../components/master-data/MasterDataEmptyState";
+import { MasterDataErrorState } from "../components/master-data/MasterDataErrorState";
+import { MasterDataLoadingState } from "../components/master-data/MasterDataLoadingState";
+import { MasterDataPageHeader } from "../components/master-data/MasterDataPageHeader";
+import { MasterDataToolbar } from "../components/master-data/MasterDataToolbar";
 import { Card } from "../components/ui/Card";
-import { Input } from "../components/ui/Input";
 import { useGenericDrugs } from "../hooks/useGenericDrugs";
 import type { GenericDrug, GenericDrugPayload } from "../types/generic-drug";
 
@@ -96,36 +99,25 @@ export function GenericDrugsPage() {
 
   return (
     <section className="page">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">Master Data</p>
-          <h2>Generic Drugs</h2>
-        </div>
-        <Button onClick={openCreateForm}>+ New Generic Drug</Button>
-      </div>
+      <MasterDataPageHeader
+        actionLabel="+ New Generic Drug"
+        onAction={openCreateForm}
+        title="Generic Drugs"
+      />
 
       <Card className="content-card">
-        <div className="toolbar">
-          <Input
-            label="Search"
-            placeholder="Search generic drugs"
-            type="search"
-          />
-          {error ? (
-            <Button variant="secondary" onClick={() => void reload()}>
-              Retry
-            </Button>
-          ) : null}
-        </div>
+        <MasterDataToolbar
+          onRetry={() => void reload()}
+          searchPlaceholder="Search generic drugs"
+          showRetry={Boolean(error)}
+        />
 
         {isLoading ? (
-          <div className="state-panel">Loading generic drugs...</div>
+          <MasterDataLoadingState message="Loading generic drugs..." />
         ) : error ? (
-          <div className="state-panel error-state">{error}</div>
+          <MasterDataErrorState message={error} />
         ) : genericDrugs.length === 0 ? (
-          <div className="state-panel">
-            No generic drugs yet. Create the first active ingredient.
-          </div>
+          <MasterDataEmptyState message="No generic drugs yet. Create the first active ingredient." />
         ) : (
           <GenericDrugTable
             genericDrugs={genericDrugs}
@@ -146,12 +138,16 @@ export function GenericDrugsPage() {
       ) : null}
 
       {genericDrugToArchive ? (
-        <DeleteGenericDrugDialog
+        <DeleteConfirmationDialog
+          confirmLabel="Archive Generic Drug"
           error={mutationError}
-          genericDrug={genericDrugToArchive}
-          isSubmitting={isSubmitting}
+          loading={isSubmitting}
+          message="Products assigned to this generic drug will not be modified."
           onCancel={closeArchiveDialog}
           onConfirm={handleArchive}
+          targetDescription={genericDrugToArchive.description}
+          targetName={genericDrugToArchive.name}
+          title="Archive this generic drug?"
         />
       ) : null}
     </section>

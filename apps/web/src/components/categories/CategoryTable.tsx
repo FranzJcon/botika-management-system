@@ -1,5 +1,9 @@
 import { Button } from "../ui/Button";
-import { Table } from "../ui/Table";
+import {
+  MasterDataTable,
+  type MasterDataColumn,
+} from "../master-data/MasterDataTable";
+import { MasterDataStatusBadge } from "../master-data/MasterDataStatusBadge";
 import type { Category } from "../../types/category";
 
 type CategoryTableProps = {
@@ -13,47 +17,45 @@ export function CategoryTable({
   onArchive,
   onEdit,
 }: CategoryTableProps) {
+  const columns: MasterDataColumn<Category>[] = [
+    {
+      header: "Name",
+      render: (category) => <strong>{category.name}</strong>,
+    },
+    {
+      header: "Description",
+      render: (category) => category.description || "No description",
+    },
+    {
+      header: "Parent Category",
+      render: (category) => category.parent?.name ?? "None",
+    },
+    {
+      header: "Status",
+      render: (category) => (
+        <MasterDataStatusBadge isActive={category.isActive} />
+      ),
+    },
+    {
+      header: "Actions",
+      render: (category) => (
+        <div className="table-actions">
+          <Button variant="secondary" onClick={() => onEdit(category)}>
+            Edit
+          </Button>
+          <Button variant="secondary" onClick={() => onArchive(category)}>
+            Archive
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <Table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Description</th>
-          <th>Parent Category</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {categories.map((category) => (
-          <tr key={category.id}>
-            <td>
-              <strong>{category.name}</strong>
-            </td>
-            <td>{category.description || "No description"}</td>
-            <td>{category.parent?.name ?? "None"}</td>
-            <td>
-              <span
-                className={
-                  category.isActive ? "status-pill active" : "status-pill archived"
-                }
-              >
-                {category.isActive ? "Active" : "Archived"}
-              </span>
-            </td>
-            <td>
-              <div className="table-actions">
-                <Button variant="secondary" onClick={() => onEdit(category)}>
-                  Edit
-                </Button>
-                <Button variant="secondary" onClick={() => onArchive(category)}>
-                  Archive
-                </Button>
-              </div>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </Table>
+    <MasterDataTable
+      columns={columns}
+      getRowKey={(category) => category.id}
+      items={categories}
+    />
   );
 }

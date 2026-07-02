@@ -1,5 +1,9 @@
 import { Button } from "../ui/Button";
-import { Table } from "../ui/Table";
+import {
+  MasterDataTable,
+  type MasterDataColumn,
+} from "../master-data/MasterDataTable";
+import { MasterDataStatusBadge } from "../master-data/MasterDataStatusBadge";
 import type { DosageForm } from "../../types/dosage-form";
 
 type DosageFormTableProps = {
@@ -13,45 +17,41 @@ export function DosageFormTable({
   onArchive,
   onEdit,
 }: DosageFormTableProps) {
+  const columns: MasterDataColumn<DosageForm>[] = [
+    {
+      header: "Name",
+      render: (dosageForm) => <strong>{dosageForm.name}</strong>,
+    },
+    {
+      header: "Description",
+      render: (dosageForm) => dosageForm.description || "No description",
+    },
+    {
+      header: "Status",
+      render: (dosageForm) => (
+        <MasterDataStatusBadge isActive={dosageForm.isActive} />
+      ),
+    },
+    {
+      header: "Actions",
+      render: (dosageForm) => (
+        <div className="table-actions">
+          <Button variant="secondary" onClick={() => onEdit(dosageForm)}>
+            Edit
+          </Button>
+          <Button variant="secondary" onClick={() => onArchive(dosageForm)}>
+            Archive
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <Table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Description</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {dosageForms.map((dosageForm) => (
-          <tr key={dosageForm.id}>
-            <td>
-              <strong>{dosageForm.name}</strong>
-            </td>
-            <td>{dosageForm.description || "No description"}</td>
-            <td>
-              <span
-                className={
-                  dosageForm.isActive ? "status-pill active" : "status-pill archived"
-                }
-              >
-                {dosageForm.isActive ? "Active" : "Archived"}
-              </span>
-            </td>
-            <td>
-              <div className="table-actions">
-                <Button variant="secondary" onClick={() => onEdit(dosageForm)}>
-                  Edit
-                </Button>
-                <Button variant="secondary" onClick={() => onArchive(dosageForm)}>
-                  Archive
-                </Button>
-              </div>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </Table>
+    <MasterDataTable
+      columns={columns}
+      getRowKey={(dosageForm) => dosageForm.id}
+      items={dosageForms}
+    />
   );
 }

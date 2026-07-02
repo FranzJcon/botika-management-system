@@ -1,5 +1,9 @@
 import { Button } from "../ui/Button";
-import { Table } from "../ui/Table";
+import {
+  MasterDataTable,
+  type MasterDataColumn,
+} from "../master-data/MasterDataTable";
+import { MasterDataStatusBadge } from "../master-data/MasterDataStatusBadge";
 import type { Brand } from "../../types/brand";
 
 type BrandTableProps = {
@@ -9,43 +13,39 @@ type BrandTableProps = {
 };
 
 export function BrandTable({ brands, onArchive, onEdit }: BrandTableProps) {
+  const columns: MasterDataColumn<Brand>[] = [
+    {
+      header: "Name",
+      render: (brand) => <strong>{brand.name}</strong>,
+    },
+    {
+      header: "Description",
+      render: (brand) => brand.description || "No description",
+    },
+    {
+      header: "Status",
+      render: (brand) => <MasterDataStatusBadge isActive={brand.isActive} />,
+    },
+    {
+      header: "Actions",
+      render: (brand) => (
+        <div className="table-actions">
+          <Button variant="secondary" onClick={() => onEdit(brand)}>
+            Edit
+          </Button>
+          <Button variant="secondary" onClick={() => onArchive(brand)}>
+            Archive
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <Table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Description</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {brands.map((brand) => (
-          <tr key={brand.id}>
-            <td>
-              <strong>{brand.name}</strong>
-            </td>
-            <td>{brand.description || "No description"}</td>
-            <td>
-              <span
-                className={brand.isActive ? "status-pill active" : "status-pill archived"}
-              >
-                {brand.isActive ? "Active" : "Archived"}
-              </span>
-            </td>
-            <td>
-              <div className="table-actions">
-                <Button variant="secondary" onClick={() => onEdit(brand)}>
-                  Edit
-                </Button>
-                <Button variant="secondary" onClick={() => onArchive(brand)}>
-                  Archive
-                </Button>
-              </div>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </Table>
+    <MasterDataTable
+      columns={columns}
+      getRowKey={(brand) => brand.id}
+      items={brands}
+    />
   );
 }

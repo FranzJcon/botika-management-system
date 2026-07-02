@@ -2,10 +2,13 @@ import { useMemo, useState } from "react";
 
 import { CategoryForm } from "../components/categories/CategoryForm";
 import { CategoryTable } from "../components/categories/CategoryTable";
-import { DeleteCategoryDialog } from "../components/categories/DeleteCategoryDialog";
-import { Button } from "../components/ui/Button";
+import { DeleteConfirmationDialog } from "../components/master-data/DeleteConfirmationDialog";
+import { MasterDataEmptyState } from "../components/master-data/MasterDataEmptyState";
+import { MasterDataErrorState } from "../components/master-data/MasterDataErrorState";
+import { MasterDataLoadingState } from "../components/master-data/MasterDataLoadingState";
+import { MasterDataPageHeader } from "../components/master-data/MasterDataPageHeader";
+import { MasterDataToolbar } from "../components/master-data/MasterDataToolbar";
 import { Card } from "../components/ui/Card";
-import { Input } from "../components/ui/Input";
 import { useCategories } from "../hooks/useCategories";
 import type { Category, CategoryPayload } from "../types/category";
 
@@ -99,36 +102,25 @@ export function CategoriesPage() {
 
   return (
     <section className="page">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">Master Data</p>
-          <h2>Categories</h2>
-        </div>
-        <Button onClick={openCreateForm}>+ New Category</Button>
-      </div>
+      <MasterDataPageHeader
+        actionLabel="+ New Category"
+        onAction={openCreateForm}
+        title="Categories"
+      />
 
       <Card className="content-card">
-        <div className="toolbar">
-          <Input
-            label="Search"
-            placeholder="Search categories"
-            type="search"
-          />
-          {error ? (
-            <Button variant="secondary" onClick={() => void reload()}>
-              Retry
-            </Button>
-          ) : null}
-        </div>
+        <MasterDataToolbar
+          onRetry={() => void reload()}
+          searchPlaceholder="Search categories"
+          showRetry={Boolean(error)}
+        />
 
         {isLoading ? (
-          <div className="state-panel">Loading categories...</div>
+          <MasterDataLoadingState message="Loading categories..." />
         ) : error ? (
-          <div className="state-panel error-state">{error}</div>
+          <MasterDataErrorState message={error} />
         ) : categories.length === 0 ? (
-          <div className="state-panel">
-            No categories yet. Create the first store category.
-          </div>
+          <MasterDataEmptyState message="No categories yet. Create the first store category." />
         ) : (
           <CategoryTable
             categories={categories}
@@ -150,12 +142,16 @@ export function CategoriesPage() {
       ) : null}
 
       {categoryToArchive ? (
-        <DeleteCategoryDialog
-          category={categoryToArchive}
+        <DeleteConfirmationDialog
+          confirmLabel="Archive Category"
           error={mutationError}
-          isSubmitting={isSubmitting}
+          loading={isSubmitting}
+          message="Products assigned to this category will not be modified."
           onCancel={closeArchiveDialog}
           onConfirm={handleArchive}
+          targetDescription={categoryToArchive.description}
+          targetName={categoryToArchive.name}
+          title="Archive this category?"
         />
       ) : null}
     </section>

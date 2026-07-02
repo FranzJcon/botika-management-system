@@ -2,10 +2,13 @@ import { useState } from "react";
 
 import { BrandForm } from "../components/brands/BrandForm";
 import { BrandTable } from "../components/brands/BrandTable";
-import { DeleteBrandDialog } from "../components/brands/DeleteBrandDialog";
-import { Button } from "../components/ui/Button";
+import { DeleteConfirmationDialog } from "../components/master-data/DeleteConfirmationDialog";
+import { MasterDataEmptyState } from "../components/master-data/MasterDataEmptyState";
+import { MasterDataErrorState } from "../components/master-data/MasterDataErrorState";
+import { MasterDataLoadingState } from "../components/master-data/MasterDataLoadingState";
+import { MasterDataPageHeader } from "../components/master-data/MasterDataPageHeader";
+import { MasterDataToolbar } from "../components/master-data/MasterDataToolbar";
 import { Card } from "../components/ui/Card";
-import { Input } from "../components/ui/Input";
 import { useBrands } from "../hooks/useBrands";
 import type { Brand, BrandPayload } from "../types/brand";
 
@@ -94,32 +97,25 @@ export function BrandsPage() {
 
   return (
     <section className="page">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">Master Data</p>
-          <h2>Brands</h2>
-        </div>
-        <Button onClick={openCreateForm}>+ New Brand</Button>
-      </div>
+      <MasterDataPageHeader
+        actionLabel="+ New Brand"
+        onAction={openCreateForm}
+        title="Brands"
+      />
 
       <Card className="content-card">
-        <div className="toolbar">
-          <Input label="Search" placeholder="Search brands" type="search" />
-          {error ? (
-            <Button variant="secondary" onClick={() => void reload()}>
-              Retry
-            </Button>
-          ) : null}
-        </div>
+        <MasterDataToolbar
+          onRetry={() => void reload()}
+          searchPlaceholder="Search brands"
+          showRetry={Boolean(error)}
+        />
 
         {isLoading ? (
-          <div className="state-panel">Loading brands...</div>
+          <MasterDataLoadingState message="Loading brands..." />
         ) : error ? (
-          <div className="state-panel error-state">{error}</div>
+          <MasterDataErrorState message={error} />
         ) : brands.length === 0 ? (
-          <div className="state-panel">
-            No brands yet. Create the first product brand.
-          </div>
+          <MasterDataEmptyState message="No brands yet. Create the first product brand." />
         ) : (
           <BrandTable
             brands={brands}
@@ -140,12 +136,16 @@ export function BrandsPage() {
       ) : null}
 
       {brandToArchive ? (
-        <DeleteBrandDialog
-          brand={brandToArchive}
+        <DeleteConfirmationDialog
+          confirmLabel="Archive Brand"
           error={mutationError}
-          isSubmitting={isSubmitting}
+          loading={isSubmitting}
+          message="Products assigned to this brand will not be modified."
           onCancel={closeArchiveDialog}
           onConfirm={handleArchive}
+          targetDescription={brandToArchive.description}
+          targetName={brandToArchive.name}
+          title="Archive this brand?"
         />
       ) : null}
     </section>

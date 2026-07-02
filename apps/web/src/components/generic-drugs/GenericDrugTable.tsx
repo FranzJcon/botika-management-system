@@ -1,5 +1,9 @@
 import { Button } from "../ui/Button";
-import { Table } from "../ui/Table";
+import {
+  MasterDataTable,
+  type MasterDataColumn,
+} from "../master-data/MasterDataTable";
+import { MasterDataStatusBadge } from "../master-data/MasterDataStatusBadge";
 import type { GenericDrug } from "../../types/generic-drug";
 
 type GenericDrugTableProps = {
@@ -13,45 +17,41 @@ export function GenericDrugTable({
   onArchive,
   onEdit,
 }: GenericDrugTableProps) {
+  const columns: MasterDataColumn<GenericDrug>[] = [
+    {
+      header: "Name",
+      render: (genericDrug) => <strong>{genericDrug.name}</strong>,
+    },
+    {
+      header: "Description",
+      render: (genericDrug) => genericDrug.description || "No description",
+    },
+    {
+      header: "Status",
+      render: (genericDrug) => (
+        <MasterDataStatusBadge isActive={genericDrug.isActive} />
+      ),
+    },
+    {
+      header: "Actions",
+      render: (genericDrug) => (
+        <div className="table-actions">
+          <Button variant="secondary" onClick={() => onEdit(genericDrug)}>
+            Edit
+          </Button>
+          <Button variant="secondary" onClick={() => onArchive(genericDrug)}>
+            Archive
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <Table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Description</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {genericDrugs.map((genericDrug) => (
-          <tr key={genericDrug.id}>
-            <td>
-              <strong>{genericDrug.name}</strong>
-            </td>
-            <td>{genericDrug.description || "No description"}</td>
-            <td>
-              <span
-                className={
-                  genericDrug.isActive ? "status-pill active" : "status-pill archived"
-                }
-              >
-                {genericDrug.isActive ? "Active" : "Archived"}
-              </span>
-            </td>
-            <td>
-              <div className="table-actions">
-                <Button variant="secondary" onClick={() => onEdit(genericDrug)}>
-                  Edit
-                </Button>
-                <Button variant="secondary" onClick={() => onArchive(genericDrug)}>
-                  Archive
-                </Button>
-              </div>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </Table>
+    <MasterDataTable
+      columns={columns}
+      getRowKey={(genericDrug) => genericDrug.id}
+      items={genericDrugs}
+    />
   );
 }
