@@ -5,6 +5,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { useAuth } from "../hooks/useAuth";
+import { ApiRequestError } from "../lib/api";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -32,8 +33,12 @@ export function LoginPage() {
     try {
       await login(email, password);
       navigate("/", { replace: true });
-    } catch {
-      setError("Invalid email or password.");
+    } catch (caughtError) {
+      if (caughtError instanceof ApiRequestError && caughtError.status === 401) {
+        setError("Invalid email or password.");
+      } else {
+        setError("Unable to reach the API. Please make sure the backend is running.");
+      }
     } finally {
       setIsSubmitting(false);
     }

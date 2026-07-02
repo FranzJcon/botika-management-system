@@ -4,6 +4,16 @@ const API_BASE_URL =
 const AUTH_TOKEN_KEY = "botika_auth_token";
 const AUTH_USER_KEY = "botika_auth_user";
 
+export class ApiRequestError extends Error {
+  status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+  }
+}
+
 export const getAuthToken = () => localStorage.getItem(AUTH_TOKEN_KEY);
 
 export const getStoredAuthUser = <T>() => {
@@ -44,7 +54,10 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed with status ${response.status}`);
+    throw new ApiRequestError(
+      `API request failed with status ${response.status}`,
+      response.status,
+    );
   }
 
   return response.json() as Promise<T>;
