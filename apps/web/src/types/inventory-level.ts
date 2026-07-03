@@ -20,6 +20,7 @@ export type InventoryLevel = {
   brand: Brand | null;
   genericDrug?: GenericDrug | null;
   defaultSellingPrice?: string | number | null;
+  sellingPrice: string | number;
   totalQuantityOnHand: string | number;
   reorderLevel: string | number;
   status: ProductStatus;

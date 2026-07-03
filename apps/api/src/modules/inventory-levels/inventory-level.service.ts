@@ -26,6 +26,19 @@ const sumQuantities = (
     0,
   );
 
+const getCurrentSellingPrice = (product: {
+  defaultSellingPrice: unknown;
+  inventoryBatches: Array<{
+    sellingPrice: unknown;
+  }>;
+}) => {
+  const nextAvailableBatch = product.inventoryBatches.find(
+    (batch) => batch.sellingPrice !== null,
+  );
+
+  return nextAvailableBatch?.sellingPrice ?? product.defaultSellingPrice ?? 0;
+};
+
 export const getInventoryLevels = async () => {
   const products = await prisma.product.findMany({
     orderBy: {
@@ -36,8 +49,20 @@ export const getInventoryLevels = async () => {
       brand: true,
       inventoryBatches: {
         where: availableBatchWhere,
+        orderBy: [
+          {
+            expirationDate: {
+              sort: "asc",
+              nulls: "last",
+            },
+          },
+          {
+            receivedDate: "asc",
+          },
+        ],
         select: {
           remainingQuantity: true,
+          sellingPrice: true,
         },
       },
     },
@@ -49,6 +74,7 @@ export const getInventoryLevels = async () => {
     sku: product.sku,
     category: product.category,
     brand: product.brand,
+    sellingPrice: getCurrentSellingPrice(product),
     totalQuantityOnHand: sumQuantities(product.inventoryBatches),
     reorderLevel: product.reorderLevel,
     status: product.status,

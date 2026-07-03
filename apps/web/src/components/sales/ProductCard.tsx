@@ -24,13 +24,11 @@ export function ProductCard({ onAdd, product }: ProductCardProps) {
         <div>
           <h3>{product.name}</h3>
           <p>SKU: {product.sku || "None"}</p>
-          <p>Brand: {product.brand?.name ?? "None"}</p>
-          <p>Generic Drug: {product.genericDrug?.name ?? "None"}</p>
           <p className="sale-product-stock">
             {isOutOfStock ? "Out of Stock" : `Stock: ${stock.toLocaleString()}`}
           </p>
         </div>
-        <strong>PHP {formatMoney(product.defaultSellingPrice)}</strong>
+        <strong>PHP {formatMoney(product.sellingPrice)}</strong>
       </div>
       <Button disabled={isOutOfStock} onClick={() => onAdd(product)}>
         Add

@@ -25,5 +25,6 @@ describe("inventory levels", () => {
     );
 
     expect(inventoryLevel.totalQuantityOnHand).toBe(100);
+    expect(Number(inventoryLevel.sellingPrice)).toBe(5);
   });
 });

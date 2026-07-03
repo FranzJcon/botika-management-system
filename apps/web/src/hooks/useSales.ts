@@ -6,7 +6,7 @@ import type { CartItem, CreateSalePayload, SaleProduct } from "../types/sale";
 
 const quantityOf = (value: string | number) => Number(value);
 
-const priceOf = (product: SaleProduct) => Number(product.defaultSellingPrice ?? 0);
+const priceOf = (product: SaleProduct) => Number(product.sellingPrice);
 
 const today = () => new Date().toISOString().slice(0, 10);
 
