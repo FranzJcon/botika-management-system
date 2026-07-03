@@ -14,6 +14,7 @@ import { ProductClassificationsPage } from "../pages/ProductClassificationsPage"
 import { ProductsPage } from "../pages/ProductsPage";
 import { SalesPage } from "../pages/SalesPage";
 import { StockAdjustmentsPage } from "../pages/StockAdjustmentsPage";
+import { StockImportPage } from "../pages/StockImportPage";
 import { StockInsPage } from "../pages/StockInsPage";
 
 function ProtectedLayout() {
@@ -59,6 +60,10 @@ export const router = createBrowserRouter([
       {
         path: "stock-ins",
         element: <StockInsPage />,
+      },
+      {
+        path: "stock-import",
+        element: <StockImportPage />,
       },
       {
         path: "inventory",

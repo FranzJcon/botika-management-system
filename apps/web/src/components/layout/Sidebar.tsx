@@ -34,6 +34,7 @@ const navGroups: NavGroup[] = [
     title: "Inventory",
     items: [
       { label: "Stock In", path: "/stock-ins" },
+      { label: "Stock Import", path: "/stock-import" },
       { label: "Inventory Levels", path: "/inventory" },
       { label: "Stock Adjustments", path: "/stock-adjustments" },
     ],
