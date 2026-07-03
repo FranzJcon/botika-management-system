@@ -11,6 +11,7 @@ import type { ProductPayload } from "../../types/product";
 type QuickAddProductModalProps = {
   categories: Category[];
   initialName?: string;
+  initialSellingPrice?: string;
   isSubmitting: boolean;
   error: string | null;
   onClose: () => void;
@@ -24,13 +25,14 @@ export function QuickAddProductModal({
   categories,
   error,
   initialName = "",
+  initialSellingPrice = "",
   isSubmitting,
   onClose,
   onSubmit,
 }: QuickAddProductModalProps) {
   const [name, setName] = useState(initialName);
   const [categoryId, setCategoryId] = useState("");
-  const [sellingPrice, setSellingPrice] = useState("");
+  const [sellingPrice, setSellingPrice] = useState(initialSellingPrice);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

@@ -23,6 +23,7 @@ import type {
 type QuickAddTarget = {
   rowId: string;
   initialName: string;
+  initialSellingPrice: string;
 };
 
 const supportedHeaders = {
@@ -132,13 +133,8 @@ const findProductMatch = (products: Product[], productName: string) => {
 
 const getRowStatus = (
   row: StockImportRow,
-  previousStatus?: StockImportRowStatus,
 ): StockImportRowStatus => {
-  if (!row.productId) {
-    return "UNKNOWN";
-  }
-
-  return previousStatus === "NEW_PRODUCT" ? "NEW_PRODUCT" : "MATCHED";
+  return row.productId ? "MATCHED" : "UNMATCHED";
 };
 
 const validateRows = (rows: StockImportRow[]) => {
@@ -147,7 +143,7 @@ const validateRows = (rows: StockImportRow[]) => {
   }
 
   if (rows.some((row) => !row.productId)) {
-    return "Match or quick add every product before creating the draft.";
+    return "Please match or quick add all products before creating a Stock In draft.";
   }
 
   for (const row of rows) {
@@ -168,11 +164,7 @@ const validateRows = (rows: StockImportRow[]) => {
 };
 
 const statusLabel = (status: StockImportRowStatus) => {
-  if (status === "NEW_PRODUCT") {
-    return "New Product";
-  }
-
-  return status === "MATCHED" ? "Matched" : "Unknown Product";
+  return status === "MATCHED" ? "Matched" : "Unmatched / New Product Needed";
 };
 
 export function StockImportPage() {
@@ -225,7 +217,7 @@ export function StockImportPage() {
         id: crypto.randomUUID(),
         sourceProductName: row.productName,
         productId: match?.id ?? "",
-        status: match ? "MATCHED" : "UNKNOWN",
+        status: match ? "MATCHED" : "UNMATCHED",
         quantity: row.quantity,
         buyingPrice: row.buyingPrice,
         sellingPrice: row.sellingPrice,
@@ -280,7 +272,7 @@ export function StockImportPage() {
           ...nextRow,
           status:
             field === "productId"
-              ? getRowStatus(nextRow, row.status)
+              ? getRowStatus(nextRow)
               : row.status,
         };
       }),
@@ -300,7 +292,7 @@ export function StockImportPage() {
       setRows((current) =>
         current.map((row) =>
           row.id === quickAddTarget.rowId
-            ? { ...row, productId: product.id, status: "NEW_PRODUCT" }
+            ? { ...row, productId: product.id, status: "MATCHED" }
             : row,
         ),
       );
@@ -423,24 +415,34 @@ export function StockImportPage() {
                   <span>{rows.length - matchedCount} need review</span>
                 </div>
 
+                {!canCreateDraft ? (
+                  <p className="form-error">
+                    Please match or quick add all products before creating a
+                    Stock In draft.
+                  </p>
+                ) : null}
+
                 <div className="table-wrap">
                   <table className="table stock-import-table">
                     <thead>
                       <tr>
-                        <th>Product</th>
+                        <th>Product Name from Excel</th>
+                        <th>Matched Product</th>
                         <th>Status</th>
-                        <th>Matched</th>
-                        <th>New Product</th>
                         <th>Quantity</th>
                         <th>Buying Price</th>
                         <th>Selling Price</th>
                         <th>Lot Number</th>
-                        <th>Expiration</th>
+                        <th>Expiration Date</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {rows.map((row) => (
                         <tr key={row.id}>
+                          <td className="stock-import-raw-product-cell">
+                            <strong>{row.sourceProductName || "Unnamed row"}</strong>
+                          </td>
                           <td className="stock-import-product-cell">
                             <ProductPicker
                               onChange={(productId) =>
@@ -451,30 +453,24 @@ export function StockImportPage() {
                                   rowId: row.id,
                                   initialName:
                                     initialName || row.sourceProductName,
+                                  initialSellingPrice: row.sellingPrice,
                                 })
                               }
                               products={products}
                               value={row.productId}
                             />
-                            {row.sourceProductName ? (
-                              <small>Imported: {row.sourceProductName}</small>
-                            ) : null}
                           </td>
                           <td>
                             <span
                               className={
-                                row.status === "UNKNOWN"
+                                row.status === "UNMATCHED"
                                   ? "status-pill archived"
-                                  : row.status === "NEW_PRODUCT"
-                                    ? "status-pill warning"
-                                    : "status-pill active"
+                                  : "status-pill active"
                               }
                             >
                               {statusLabel(row.status)}
                             </span>
                           </td>
-                          <td>{row.productId ? "Yes" : "No"}</td>
-                          <td>{row.status === "NEW_PRODUCT" ? "Yes" : "No"}</td>
                           <td>
                             <Input
                               min="0.001"
@@ -537,6 +533,24 @@ export function StockImportPage() {
                               value={row.expirationDate}
                             />
                           </td>
+                          <td>
+                            {row.status === "UNMATCHED" ? (
+                              <Button
+                                variant="secondary"
+                                onClick={() =>
+                                  setQuickAddTarget({
+                                    rowId: row.id,
+                                    initialName: row.sourceProductName,
+                                    initialSellingPrice: row.sellingPrice,
+                                  })
+                                }
+                              >
+                                Quick Add Product
+                              </Button>
+                            ) : (
+                              <span className="muted-text">Ready</span>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -562,6 +576,7 @@ export function StockImportPage() {
           categories={categories}
           error={quickAddError}
           initialName={quickAddTarget.initialName}
+          initialSellingPrice={quickAddTarget.initialSellingPrice}
           isSubmitting={isQuickAdding}
           onClose={() => {
             setQuickAddTarget(null);

@@ -1,6 +1,6 @@
 import type { Product } from "./product";
 
-export type StockImportRowStatus = "MATCHED" | "UNKNOWN" | "NEW_PRODUCT";
+export type StockImportRowStatus = "MATCHED" | "UNMATCHED";
 
 export type StockImportRow = {
   id: string;
