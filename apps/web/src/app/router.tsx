@@ -13,6 +13,7 @@ import { NotFoundPage } from "../pages/NotFoundPage";
 import { ProductClassificationsPage } from "../pages/ProductClassificationsPage";
 import { ProductsPage } from "../pages/ProductsPage";
 import { SalesPage } from "../pages/SalesPage";
+import { StockAdjustmentsPage } from "../pages/StockAdjustmentsPage";
 import { StockInsPage } from "../pages/StockInsPage";
 
 function ProtectedLayout() {
@@ -66,6 +67,10 @@ export const router = createBrowserRouter([
       {
         path: "sales",
         element: <SalesPage />,
+      },
+      {
+        path: "stock-adjustments",
+        element: <StockAdjustmentsPage />,
       },
       {
         path: "*",

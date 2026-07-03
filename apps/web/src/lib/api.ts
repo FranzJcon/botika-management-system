@@ -6,11 +6,13 @@ const AUTH_USER_KEY = "botika_auth_user";
 
 export class ApiRequestError extends Error {
   status?: number;
+  responseMessage?: string;
 
-  constructor(message: string, status?: number) {
+  constructor(message: string, status?: number, responseMessage?: string) {
     super(message);
     this.name = "ApiRequestError";
     this.status = status;
+    this.responseMessage = responseMessage;
   }
 }
 
@@ -54,9 +56,15 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   });
 
   if (!response.ok) {
+    const errorBody = (await response
+      .clone()
+      .json()
+      .catch(() => null)) as { message?: string } | null;
+
     throw new ApiRequestError(
       `API request failed with status ${response.status}`,
       response.status,
+      errorBody?.message,
     );
   }
 
