@@ -5,6 +5,7 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
 import { Textarea } from "../ui/Textarea";
+import { isPharmaceuticalCategory } from "../../lib/product-categories";
 import type {
   Product,
   ProductFormValues,
@@ -41,14 +42,16 @@ const activeOnly = <T extends { isActive: boolean }>(items: T[]) =>
 const toOptionalNumber = (value: string) =>
   value.trim() === "" ? null : Number(value);
 
+const toOptionalId = (value: string) => value || null;
+
 const toPayload = (values: ProductFormValues): ProductPayload => ({
   sku: values.sku.trim() || null,
   name: values.name.trim(),
   categoryId: values.categoryId,
-  brandId: values.brandId,
-  genericDrugId: values.genericDrugId,
-  dosageFormId: values.dosageFormId,
-  classificationId: values.classificationId,
+  brandId: toOptionalId(values.brandId),
+  genericDrugId: toOptionalId(values.genericDrugId),
+  dosageFormId: toOptionalId(values.dosageFormId),
+  classificationId: toOptionalId(values.classificationId),
   defaultSellingPrice: toOptionalNumber(values.defaultSellingPrice),
   reorderLevel: Number(values.reorderLevel),
   status: values.status,
@@ -102,6 +105,11 @@ export function ProductForm({
     [lookups],
   );
 
+  const selectedCategory = lookups.categories.find(
+    (category) => category.id === values.categoryId,
+  );
+  const showPharmaceuticalFields = isPharmaceuticalCategory(selectedCategory);
+
   const title = product ? "Edit Product" : "New Product";
 
   const updateValue = (name: keyof ProductFormValues, value: string) => {
@@ -112,15 +120,8 @@ export function ProductForm({
   };
 
   const validate = () => {
-    if (
-      !values.name.trim() ||
-      !values.categoryId ||
-      !values.brandId ||
-      !values.genericDrugId ||
-      !values.dosageFormId ||
-      !values.classificationId
-    ) {
-      return "Product name and all lookup fields are required.";
+    if (!values.name.trim() || !values.categoryId) {
+      return "Product name and category are required.";
     }
 
     if (Number(values.defaultSellingPrice || 0) < 0) {
@@ -196,7 +197,6 @@ export function ProductForm({
             <Select
               label="Brand"
               onChange={(event) => updateValue("brandId", event.target.value)}
-              required
               value={values.brandId}
             >
               <option value="">Select brand</option>
@@ -206,51 +206,52 @@ export function ProductForm({
                 </option>
               ))}
             </Select>
-            <Select
-              label="Generic Drug"
-              onChange={(event) =>
-                updateValue("genericDrugId", event.target.value)
-              }
-              required
-              value={values.genericDrugId}
-            >
-              <option value="">Select generic drug</option>
-              {lookupOptions.genericDrugs.map((genericDrug) => (
-                <option key={genericDrug.id} value={genericDrug.id}>
-                  {genericDrug.name}
-                </option>
-              ))}
-            </Select>
-            <Select
-              label="Dosage Form"
-              onChange={(event) =>
-                updateValue("dosageFormId", event.target.value)
-              }
-              required
-              value={values.dosageFormId}
-            >
-              <option value="">Select dosage form</option>
-              {lookupOptions.dosageForms.map((dosageForm) => (
-                <option key={dosageForm.id} value={dosageForm.id}>
-                  {dosageForm.name}
-                </option>
-              ))}
-            </Select>
-            <Select
-              label="Product Classification"
-              onChange={(event) =>
-                updateValue("classificationId", event.target.value)
-              }
-              required
-              value={values.classificationId}
-            >
-              <option value="">Select classification</option>
-              {lookupOptions.productClassifications.map((classification) => (
-                <option key={classification.id} value={classification.id}>
-                  {classification.name}
-                </option>
-              ))}
-            </Select>
+            {showPharmaceuticalFields ? (
+              <>
+                <Select
+                  label="Generic Drug"
+                  onChange={(event) =>
+                    updateValue("genericDrugId", event.target.value)
+                  }
+                  value={values.genericDrugId}
+                >
+                  <option value="">Select generic drug</option>
+                  {lookupOptions.genericDrugs.map((genericDrug) => (
+                    <option key={genericDrug.id} value={genericDrug.id}>
+                      {genericDrug.name}
+                    </option>
+                  ))}
+                </Select>
+                <Select
+                  label="Dosage Form"
+                  onChange={(event) =>
+                    updateValue("dosageFormId", event.target.value)
+                  }
+                  value={values.dosageFormId}
+                >
+                  <option value="">Select dosage form</option>
+                  {lookupOptions.dosageForms.map((dosageForm) => (
+                    <option key={dosageForm.id} value={dosageForm.id}>
+                      {dosageForm.name}
+                    </option>
+                  ))}
+                </Select>
+                <Select
+                  label="Product Classification"
+                  onChange={(event) =>
+                    updateValue("classificationId", event.target.value)
+                  }
+                  value={values.classificationId}
+                >
+                  <option value="">Select classification</option>
+                  {lookupOptions.productClassifications.map((classification) => (
+                    <option key={classification.id} value={classification.id}>
+                      {classification.name}
+                    </option>
+                  ))}
+                </Select>
+              </>
+            ) : null}
             <Select
               label="Status"
               onChange={(event) =>
