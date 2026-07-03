@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { ProductClassificationForm } from "../components/product-classifications/ProductClassificationForm";
 import { ProductClassificationTable } from "../components/product-classifications/ProductClassificationTable";
@@ -9,6 +9,7 @@ import { MasterDataLoadingState } from "../components/master-data/MasterDataLoad
 import { MasterDataPageHeader } from "../components/master-data/MasterDataPageHeader";
 import { MasterDataToolbar } from "../components/master-data/MasterDataToolbar";
 import { Card } from "../components/ui/Card";
+import { useToast } from "../components/ui/ToastProvider";
 import { useProductClassifications } from "../hooks/useProductClassifications";
 import type {
   ProductClassification,
@@ -34,6 +35,18 @@ export function ProductClassificationsPage() {
     useState<ProductClassification | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { showToast } = useToast();
+
+  const filteredProductClassifications = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    return query
+      ? productClassifications.filter((classification) =>
+          classification.name.toLowerCase().includes(query),
+        )
+      : productClassifications;
+  }, [productClassifications, searchTerm]);
 
   const openCreateForm = () => {
     setMutationError(null);
@@ -60,15 +73,18 @@ export function ProductClassificationsPage() {
     try {
       if (formMode === "edit" && selectedProductClassification) {
         await updateProductClassification(selectedProductClassification.id, payload);
+        showToast("success", "Product classification updated");
       } else {
         await createProductClassification(payload);
+        showToast("success", "Product classification created");
       }
 
       closeForm();
     } catch {
-      setMutationError(
-        "Unable to save product classification. Please check the details.",
-      );
+      const message =
+        "Unable to save product classification. Please check the details.";
+      setMutationError(message);
+      showToast("error", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -97,10 +113,12 @@ export function ProductClassificationsPage() {
     try {
       await archiveProductClassification(productClassificationToArchive.id);
       closeArchiveDialog();
+      showToast("success", "Product classification archived");
     } catch {
-      setMutationError(
-        "Unable to archive product classification. Please try again.",
-      );
+      const message =
+        "Unable to archive product classification. Please try again.";
+      setMutationError(message);
+      showToast("error", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -117,7 +135,9 @@ export function ProductClassificationsPage() {
       <Card className="content-card">
         <MasterDataToolbar
           onRetry={() => void reload()}
+          onSearchChange={setSearchTerm}
           searchPlaceholder="Search product classifications"
+          searchValue={searchTerm}
           showRetry={Boolean(error)}
         />
 
@@ -127,11 +147,13 @@ export function ProductClassificationsPage() {
           <MasterDataErrorState message={error} />
         ) : productClassifications.length === 0 ? (
           <MasterDataEmptyState message="No product classifications yet. Create the first classification." />
+        ) : filteredProductClassifications.length === 0 ? (
+          <MasterDataEmptyState message="No product classifications match your search." />
         ) : (
           <ProductClassificationTable
             onArchive={openArchiveDialog}
             onEdit={openEditForm}
-            productClassifications={productClassifications}
+            productClassifications={filteredProductClassifications}
           />
         )}
       </Card>

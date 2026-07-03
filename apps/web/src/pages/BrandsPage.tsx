@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { BrandForm } from "../components/brands/BrandForm";
 import { BrandTable } from "../components/brands/BrandTable";
@@ -9,6 +9,7 @@ import { MasterDataLoadingState } from "../components/master-data/MasterDataLoad
 import { MasterDataPageHeader } from "../components/master-data/MasterDataPageHeader";
 import { MasterDataToolbar } from "../components/master-data/MasterDataToolbar";
 import { Card } from "../components/ui/Card";
+import { useToast } from "../components/ui/ToastProvider";
 import { useBrands } from "../hooks/useBrands";
 import type { Brand, BrandPayload } from "../types/brand";
 
@@ -29,6 +30,16 @@ export function BrandsPage() {
   const [brandToArchive, setBrandToArchive] = useState<Brand | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { showToast } = useToast();
+
+  const filteredBrands = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    return query
+      ? brands.filter((brand) => brand.name.toLowerCase().includes(query))
+      : brands;
+  }, [brands, searchTerm]);
 
   const openCreateForm = () => {
     setMutationError(null);
@@ -55,13 +66,17 @@ export function BrandsPage() {
     try {
       if (formMode === "edit" && selectedBrand) {
         await updateBrand(selectedBrand.id, payload);
+        showToast("success", "Brand updated");
       } else {
         await createBrand(payload);
+        showToast("success", "Brand created");
       }
 
       closeForm();
     } catch {
-      setMutationError("Unable to save brand. Please check the details.");
+      const message = "Unable to save brand. Please check the details.";
+      setMutationError(message);
+      showToast("error", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -88,8 +103,11 @@ export function BrandsPage() {
     try {
       await archiveBrand(brandToArchive.id);
       closeArchiveDialog();
+      showToast("success", "Brand archived");
     } catch {
-      setMutationError("Unable to archive brand. Please try again.");
+      const message = "Unable to archive brand. Please try again.";
+      setMutationError(message);
+      showToast("error", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -106,7 +124,9 @@ export function BrandsPage() {
       <Card className="content-card">
         <MasterDataToolbar
           onRetry={() => void reload()}
+          onSearchChange={setSearchTerm}
           searchPlaceholder="Search brands"
+          searchValue={searchTerm}
           showRetry={Boolean(error)}
         />
 
@@ -116,9 +136,11 @@ export function BrandsPage() {
           <MasterDataErrorState message={error} />
         ) : brands.length === 0 ? (
           <MasterDataEmptyState message="No brands yet. Create the first product brand." />
+        ) : filteredBrands.length === 0 ? (
+          <MasterDataEmptyState message="No brands match your search." />
         ) : (
           <BrandTable
-            brands={brands}
+            brands={filteredBrands}
             onArchive={openArchiveDialog}
             onEdit={openEditForm}
           />

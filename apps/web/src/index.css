@@ -653,6 +653,11 @@ a {
   color: #7c5a12;
 }
 
+.status-pill.warning {
+  background: var(--warning-soft);
+  color: #7c5a12;
+}
+
 .table-actions {
   display: flex;
   gap: 8px;
@@ -873,6 +878,38 @@ a {
   font-size: 14px;
   margin: 0;
   padding: 10px 12px;
+}
+
+.toast-region {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: fixed;
+  right: 20px;
+  top: 20px;
+  width: min(360px, calc(100vw - 40px));
+  z-index: 80;
+}
+
+.toast {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+}
+
+.toast span {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.toast-error {
+  border-left-color: #9f2d20;
 }
 
 .confirm-modal {

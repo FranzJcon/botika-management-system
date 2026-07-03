@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { MasterDataEmptyState } from "../components/master-data/MasterDataEmptyState";
 import { MasterDataErrorState } from "../components/master-data/MasterDataErrorState";
@@ -10,6 +10,7 @@ import { StockInDetailsDialog } from "../components/stock-ins/StockInDetailsDial
 import { StockInForm } from "../components/stock-ins/StockInForm";
 import { StockInTable } from "../components/stock-ins/StockInTable";
 import { Card } from "../components/ui/Card";
+import { useToast } from "../components/ui/ToastProvider";
 import { useStockIns } from "../hooks/useStockIns";
 import type { CreateStockInPayload, StockIn } from "../types/stock-in";
 
@@ -31,6 +32,29 @@ export function StockInsPage() {
   const [stockInToPost, setStockInToPost] = useState<StockIn | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { showToast } = useToast();
+
+  const filteredStockIns = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    if (!query) {
+      return stockIns;
+    }
+
+    return stockIns.filter((stockIn) =>
+      [
+        stockIn.referenceNumber,
+        stockIn.referenceType,
+        stockIn.sourceType,
+        stockIn.status,
+        stockIn.notes,
+        ...stockIn.items.map((item) => item.product?.name),
+      ]
+        .filter(Boolean)
+        .some((value) => value?.toLowerCase().includes(query)),
+    );
+  }, [searchTerm, stockIns]);
 
   const closeForm = () => {
     setIsFormOpen(false);
@@ -44,8 +68,11 @@ export function StockInsPage() {
     try {
       await createStockIn(payload);
       closeForm();
+      showToast("success", "Stock in draft saved");
     } catch {
-      setMutationError("Unable to save stock in draft. Please check the details.");
+      const message = "Unable to save stock in draft. Please check the details.";
+      setMutationError(message);
+      showToast("error", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -58,7 +85,9 @@ export function StockInsPage() {
       const detail = await getStockIn(stockIn.id);
       setSelectedStockIn(detail);
     } catch {
-      setMutationError("Unable to load stock in details. Please try again.");
+      const message = "Unable to load stock in details. Please try again.";
+      setMutationError(message);
+      showToast("error", message);
     }
   };
 
@@ -88,8 +117,11 @@ export function StockInsPage() {
     try {
       await postStockIn(stockInToPost.id);
       closePostDialog();
+      showToast("success", "Stock in posted");
     } catch {
-      setMutationError("Unable to post stock in. Please try again.");
+      const message = "Unable to post stock in. Please try again.";
+      setMutationError(message);
+      showToast("error", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -106,7 +138,9 @@ export function StockInsPage() {
       <Card className="content-card">
         <MasterDataToolbar
           onRetry={() => void reload()}
+          onSearchChange={setSearchTerm}
           searchPlaceholder="Search stock-ins"
+          searchValue={searchTerm}
           showRetry={Boolean(error)}
         />
 
@@ -115,12 +149,14 @@ export function StockInsPage() {
         ) : error ? (
           <MasterDataErrorState message={error} />
         ) : stockIns.length === 0 ? (
-          <MasterDataEmptyState message="No stock-ins yet. Create the first receiving draft." />
+          <MasterDataEmptyState message="No stock-ins yet. Receive inventory by creating the first draft." />
+        ) : filteredStockIns.length === 0 ? (
+          <MasterDataEmptyState message="No stock-ins match your search." />
         ) : (
           <StockInTable
             onPost={openPostDialog}
             onView={(stockIn) => void openDetails(stockIn)}
-            stockIns={stockIns}
+            stockIns={filteredStockIns}
           />
         )}
       </Card>

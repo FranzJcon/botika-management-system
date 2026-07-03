@@ -79,16 +79,20 @@ export function ProductForm({
   product,
 }: ProductFormProps) {
   const [values, setValues] = useState<ProductFormValues>(emptyValues);
+  const [initialSnapshot, setInitialSnapshot] = useState(() =>
+    JSON.stringify(emptyValues),
+  );
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!product) {
       setValues(emptyValues);
+      setInitialSnapshot(JSON.stringify(emptyValues));
       setValidationError(null);
       return;
     }
 
-    setValues({
+    const nextValues = {
       sku: product.sku ?? "",
       name: product.name,
       categoryId: product.categoryId ?? "",
@@ -107,7 +111,10 @@ export function ProductForm({
       requiresLotTracking: product.requiresLotTracking,
       description: "",
       status: product.status,
-    });
+    };
+
+    setValues(nextValues);
+    setInitialSnapshot(JSON.stringify(nextValues));
     setValidationError(null);
   }, [product]);
 
@@ -128,6 +135,18 @@ export function ProductForm({
   const showMedicineFields = isPharmaceuticalCategory(selectedCategory);
 
   const title = product ? "Edit Product" : "New Product";
+  const hasUnsavedChanges = JSON.stringify(values) !== initialSnapshot;
+
+  const handleClose = () => {
+    if (
+      hasUnsavedChanges &&
+      !window.confirm("Discard unsaved product changes?")
+    ) {
+      return;
+    }
+
+    onClose();
+  };
 
   const updateValue = (name: keyof ProductFormValues, value: string) => {
     setValues((current) => ({
@@ -185,7 +204,7 @@ export function ProductForm({
             <p className="eyebrow">Products</p>
             <h2 id="product-form-title">{title}</h2>
           </div>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={handleClose}>
             Close
           </Button>
         </div>
@@ -354,7 +373,7 @@ export function ProductForm({
           {error ? <p className="form-error">{error}</p> : null}
 
           <div className="modal-actions">
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="secondary" onClick={handleClose}>
               Cancel
             </Button>
             <Button disabled={isSubmitting} type="submit">

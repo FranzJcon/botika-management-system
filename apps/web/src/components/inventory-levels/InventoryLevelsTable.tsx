@@ -15,6 +15,21 @@ const formatQuantity = (value: string | number) => Number(value).toLocaleString(
 
 const relatedName = (value: { name: string } | null) => value?.name ?? "None";
 
+const getInventoryStatus = (item: InventoryLevel) => {
+  const quantity = Number(item.totalQuantityOnHand);
+  const reorderLevel = Number(item.reorderLevel);
+
+  if (quantity <= 0) {
+    return { className: "status-pill archived", label: "Out of Stock" };
+  }
+
+  if (quantity <= reorderLevel) {
+    return { className: "status-pill warning", label: "Low Stock" };
+  }
+
+  return { className: "status-pill active", label: "In Stock" };
+};
+
 export function InventoryLevelsTable({
   inventoryLevels,
   onViewBatches,
@@ -47,15 +62,11 @@ export function InventoryLevelsTable({
     },
     {
       header: "Status",
-      render: (item) => (
-        <span
-          className={
-            item.status === "ACTIVE" ? "status-pill active" : "status-pill archived"
-          }
-        >
-          {item.status}
-        </span>
-      ),
+      render: (item) => {
+        const status = getInventoryStatus(item);
+
+        return <span className={status.className}>{status.label}</span>;
+      },
     },
   ];
 

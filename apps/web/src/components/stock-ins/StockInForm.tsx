@@ -79,7 +79,8 @@ export function StockInForm({
   onSubmit,
   products,
 }: StockInFormProps) {
-  const [values, setValues] = useState<StockInFormValues>(initialValues);
+  const [values, setValues] = useState<StockInFormValues>(() => initialValues());
+  const [initialSnapshot] = useState(() => JSON.stringify(values));
   const [validationError, setValidationError] = useState<string | null>(null);
   const [quickAddTarget, setQuickAddTarget] = useState<{
     itemId: string;
@@ -96,6 +97,19 @@ export function StockInForm({
       ...current,
       [field]: value,
     }));
+  };
+
+  const hasUnsavedChanges = JSON.stringify(values) !== initialSnapshot;
+
+  const handleClose = () => {
+    if (
+      hasUnsavedChanges &&
+      !window.confirm("Discard unsaved stock in draft?")
+    ) {
+      return;
+    }
+
+    onClose();
   };
 
   const updateItem = (
@@ -200,7 +214,7 @@ export function StockInForm({
             <p className="eyebrow">Stock In</p>
             <h2 id="stock-in-form-title">New Stock In</h2>
           </div>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={handleClose}>
             Close
           </Button>
         </div>
@@ -277,7 +291,7 @@ export function StockInForm({
           {error ? <p className="form-error">{error}</p> : null}
 
           <div className="modal-actions">
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="secondary" onClick={handleClose}>
               Cancel
             </Button>
             <Button disabled={isSubmitting} type="submit">

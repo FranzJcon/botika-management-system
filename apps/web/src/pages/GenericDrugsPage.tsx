@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { GenericDrugForm } from "../components/generic-drugs/GenericDrugForm";
 import { GenericDrugTable } from "../components/generic-drugs/GenericDrugTable";
@@ -9,6 +9,7 @@ import { MasterDataLoadingState } from "../components/master-data/MasterDataLoad
 import { MasterDataPageHeader } from "../components/master-data/MasterDataPageHeader";
 import { MasterDataToolbar } from "../components/master-data/MasterDataToolbar";
 import { Card } from "../components/ui/Card";
+import { useToast } from "../components/ui/ToastProvider";
 import { useGenericDrugs } from "../hooks/useGenericDrugs";
 import type { GenericDrug, GenericDrugPayload } from "../types/generic-drug";
 
@@ -31,6 +32,16 @@ export function GenericDrugsPage() {
     useState<GenericDrug | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { showToast } = useToast();
+
+  const filteredGenericDrugs = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    return query
+      ? genericDrugs.filter((drug) => drug.name.toLowerCase().includes(query))
+      : genericDrugs;
+  }, [genericDrugs, searchTerm]);
 
   const openCreateForm = () => {
     setMutationError(null);
@@ -57,13 +68,17 @@ export function GenericDrugsPage() {
     try {
       if (formMode === "edit" && selectedGenericDrug) {
         await updateGenericDrug(selectedGenericDrug.id, payload);
+        showToast("success", "Generic drug updated");
       } else {
         await createGenericDrug(payload);
+        showToast("success", "Generic drug created");
       }
 
       closeForm();
     } catch {
-      setMutationError("Unable to save generic drug. Please check the details.");
+      const message = "Unable to save generic drug. Please check the details.";
+      setMutationError(message);
+      showToast("error", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -90,8 +105,11 @@ export function GenericDrugsPage() {
     try {
       await archiveGenericDrug(genericDrugToArchive.id);
       closeArchiveDialog();
+      showToast("success", "Generic drug archived");
     } catch {
-      setMutationError("Unable to archive generic drug. Please try again.");
+      const message = "Unable to archive generic drug. Please try again.";
+      setMutationError(message);
+      showToast("error", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -108,7 +126,9 @@ export function GenericDrugsPage() {
       <Card className="content-card">
         <MasterDataToolbar
           onRetry={() => void reload()}
+          onSearchChange={setSearchTerm}
           searchPlaceholder="Search generic drugs"
+          searchValue={searchTerm}
           showRetry={Boolean(error)}
         />
 
@@ -118,9 +138,11 @@ export function GenericDrugsPage() {
           <MasterDataErrorState message={error} />
         ) : genericDrugs.length === 0 ? (
           <MasterDataEmptyState message="No generic drugs yet. Create the first active ingredient." />
+        ) : filteredGenericDrugs.length === 0 ? (
+          <MasterDataEmptyState message="No generic drugs match your search." />
         ) : (
           <GenericDrugTable
-            genericDrugs={genericDrugs}
+            genericDrugs={filteredGenericDrugs}
             onArchive={openArchiveDialog}
             onEdit={openEditForm}
           />

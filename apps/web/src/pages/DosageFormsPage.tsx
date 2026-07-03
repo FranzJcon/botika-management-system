@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { DosageFormForm } from "../components/dosage-forms/DosageFormForm";
 import { DosageFormTable } from "../components/dosage-forms/DosageFormTable";
@@ -9,6 +9,7 @@ import { MasterDataLoadingState } from "../components/master-data/MasterDataLoad
 import { MasterDataPageHeader } from "../components/master-data/MasterDataPageHeader";
 import { MasterDataToolbar } from "../components/master-data/MasterDataToolbar";
 import { Card } from "../components/ui/Card";
+import { useToast } from "../components/ui/ToastProvider";
 import { useDosageForms } from "../hooks/useDosageForms";
 import type { DosageForm, DosageFormPayload } from "../types/dosage-form";
 
@@ -31,6 +32,16 @@ export function DosageFormsPage() {
     useState<DosageForm | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { showToast } = useToast();
+
+  const filteredDosageForms = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    return query
+      ? dosageForms.filter((form) => form.name.toLowerCase().includes(query))
+      : dosageForms;
+  }, [dosageForms, searchTerm]);
 
   const openCreateForm = () => {
     setMutationError(null);
@@ -57,13 +68,17 @@ export function DosageFormsPage() {
     try {
       if (formMode === "edit" && selectedDosageForm) {
         await updateDosageForm(selectedDosageForm.id, payload);
+        showToast("success", "Dosage form updated");
       } else {
         await createDosageForm(payload);
+        showToast("success", "Dosage form created");
       }
 
       closeForm();
     } catch {
-      setMutationError("Unable to save dosage form. Please check the details.");
+      const message = "Unable to save dosage form. Please check the details.";
+      setMutationError(message);
+      showToast("error", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -90,8 +105,11 @@ export function DosageFormsPage() {
     try {
       await archiveDosageForm(dosageFormToArchive.id);
       closeArchiveDialog();
+      showToast("success", "Dosage form archived");
     } catch {
-      setMutationError("Unable to archive dosage form. Please try again.");
+      const message = "Unable to archive dosage form. Please try again.";
+      setMutationError(message);
+      showToast("error", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -108,7 +126,9 @@ export function DosageFormsPage() {
       <Card className="content-card">
         <MasterDataToolbar
           onRetry={() => void reload()}
+          onSearchChange={setSearchTerm}
           searchPlaceholder="Search dosage forms"
+          searchValue={searchTerm}
           showRetry={Boolean(error)}
         />
 
@@ -118,9 +138,11 @@ export function DosageFormsPage() {
           <MasterDataErrorState message={error} />
         ) : dosageForms.length === 0 ? (
           <MasterDataEmptyState message="No dosage forms yet. Create the first product form." />
+        ) : filteredDosageForms.length === 0 ? (
+          <MasterDataEmptyState message="No dosage forms match your search." />
         ) : (
           <DosageFormTable
-            dosageForms={dosageForms}
+            dosageForms={filteredDosageForms}
             onArchive={openArchiveDialog}
             onEdit={openEditForm}
           />

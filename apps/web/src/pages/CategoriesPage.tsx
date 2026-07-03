@@ -9,6 +9,7 @@ import { MasterDataLoadingState } from "../components/master-data/MasterDataLoad
 import { MasterDataPageHeader } from "../components/master-data/MasterDataPageHeader";
 import { MasterDataToolbar } from "../components/master-data/MasterDataToolbar";
 import { Card } from "../components/ui/Card";
+import { useToast } from "../components/ui/ToastProvider";
 import { useCategories } from "../hooks/useCategories";
 import type { Category, CategoryPayload } from "../types/category";
 
@@ -29,11 +30,24 @@ export function CategoriesPage() {
   const [categoryToArchive, setCategoryToArchive] = useState<Category | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { showToast } = useToast();
 
   const activeCategories = useMemo(
     () => categories.filter((category) => category.isActive),
     [categories],
   );
+  const filteredCategories = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    if (!query) {
+      return categories;
+    }
+
+    return categories.filter((category) =>
+      category.name.toLowerCase().includes(query),
+    );
+  }, [categories, searchTerm]);
 
   const openCreateForm = () => {
     setMutationError(null);
@@ -60,13 +74,17 @@ export function CategoriesPage() {
     try {
       if (formMode === "edit" && selectedCategory) {
         await updateCategory(selectedCategory.id, payload);
+        showToast("success", "Category updated");
       } else {
         await createCategory(payload);
+        showToast("success", "Category created");
       }
 
       closeForm();
     } catch {
-      setMutationError("Unable to save category. Please check the details.");
+      const message = "Unable to save category. Please check the details.";
+      setMutationError(message);
+      showToast("error", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -93,8 +111,11 @@ export function CategoriesPage() {
     try {
       await archiveCategory(categoryToArchive.id);
       closeArchiveDialog();
+      showToast("success", "Category archived");
     } catch {
-      setMutationError("Unable to archive category. Please try again.");
+      const message = "Unable to archive category. Please try again.";
+      setMutationError(message);
+      showToast("error", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -111,7 +132,9 @@ export function CategoriesPage() {
       <Card className="content-card">
         <MasterDataToolbar
           onRetry={() => void reload()}
+          onSearchChange={setSearchTerm}
           searchPlaceholder="Search categories"
+          searchValue={searchTerm}
           showRetry={Boolean(error)}
         />
 
@@ -121,9 +144,11 @@ export function CategoriesPage() {
           <MasterDataErrorState message={error} />
         ) : categories.length === 0 ? (
           <MasterDataEmptyState message="No categories yet. Create the first store category." />
+        ) : filteredCategories.length === 0 ? (
+          <MasterDataEmptyState message="No categories match your search." />
         ) : (
           <CategoryTable
-            categories={categories}
+            categories={filteredCategories}
             onArchive={openArchiveDialog}
             onEdit={openEditForm}
           />

@@ -9,6 +9,7 @@ import { MasterDataErrorState } from "../components/master-data/MasterDataErrorS
 import { MasterDataLoadingState } from "../components/master-data/MasterDataLoadingState";
 import { MasterDataPageHeader } from "../components/master-data/MasterDataPageHeader";
 import { Card } from "../components/ui/Card";
+import { useToast } from "../components/ui/ToastProvider";
 import { useSales } from "../hooks/useSales";
 
 export function SalesPage() {
@@ -30,12 +31,20 @@ export function SalesPage() {
   } = useSales();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (successMessage) {
+      showToast("success", successMessage);
       searchInputRef.current?.focus();
     }
-  }, [successMessage]);
+  }, [showToast, successMessage]);
+
+  useEffect(() => {
+    if (saleError && !isCompleteDialogOpen) {
+      showToast("error", saleError);
+    }
+  }, [isCompleteDialogOpen, saleError, showToast]);
 
   const handleCompleteSale = async () => {
     const completed = await completeSale();
@@ -48,14 +57,6 @@ export function SalesPage() {
   return (
     <section className="page">
       <MasterDataPageHeader eyebrow="Sales" title="Sales" />
-
-      {successMessage ? (
-        <Card className="state-panel success-state">{successMessage}</Card>
-      ) : null}
-
-      {saleError && !isCompleteDialogOpen ? (
-        <Card className="state-panel error-state">{saleError}</Card>
-      ) : null}
 
       <div className="sales-workspace">
         <Card className="sales-panel sales-products-panel">

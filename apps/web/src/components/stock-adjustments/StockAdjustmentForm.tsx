@@ -80,7 +80,10 @@ export function StockAdjustmentForm({
   onClose,
   onSubmit,
 }: StockAdjustmentFormProps) {
-  const [values, setValues] = useState<StockAdjustmentFormValues>(initialValues);
+  const [values, setValues] = useState<StockAdjustmentFormValues>(() =>
+    initialValues(),
+  );
+  const [initialSnapshot] = useState(() => JSON.stringify(values));
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
   const [batchLookup, setBatchLookup] = useState<Record<string, InventoryBatch>>(
@@ -98,6 +101,19 @@ export function StockAdjustmentForm({
       ...current,
       [field]: value,
     }));
+  };
+
+  const hasUnsavedChanges = JSON.stringify(values) !== initialSnapshot;
+
+  const handleClose = () => {
+    if (
+      hasUnsavedChanges &&
+      !window.confirm("Discard unsaved stock adjustment?")
+    ) {
+      return;
+    }
+
+    onClose();
   };
 
   const updateItem = (
@@ -203,7 +219,7 @@ export function StockAdjustmentForm({
             <p className="eyebrow">Stock Adjustments</p>
             <h2 id="stock-adjustment-form-title">New Adjustment</h2>
           </div>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={handleClose}>
             Close
           </Button>
         </div>
@@ -357,7 +373,7 @@ export function StockAdjustmentForm({
           {error ? <p className="form-error">{error}</p> : null}
 
           <div className="modal-actions">
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="secondary" onClick={handleClose}>
               Cancel
             </Button>
             <Button disabled={isSubmitting} type="submit">

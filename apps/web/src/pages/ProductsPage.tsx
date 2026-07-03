@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { MasterDataEmptyState } from "../components/master-data/MasterDataEmptyState";
 import { MasterDataErrorState } from "../components/master-data/MasterDataErrorState";
@@ -9,6 +9,7 @@ import { DeleteProductDialog } from "../components/products/DeleteProductDialog"
 import { ProductForm } from "../components/products/ProductForm";
 import { ProductTable } from "../components/products/ProductTable";
 import { Card } from "../components/ui/Card";
+import { useToast } from "../components/ui/ToastProvider";
 import { useProducts } from "../hooks/useProducts";
 import type { Product, ProductPayload } from "../types/product";
 
@@ -30,6 +31,28 @@ export function ProductsPage() {
   const [productToArchive, setProductToArchive] = useState<Product | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { showToast } = useToast();
+
+  const filteredProducts = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    if (!query) {
+      return products;
+    }
+
+    return products.filter((product) =>
+      [
+        product.name,
+        product.sku,
+        product.brand?.name,
+        product.genericDrug?.name,
+        product.category?.name,
+      ]
+        .filter(Boolean)
+        .some((value) => value?.toLowerCase().includes(query)),
+    );
+  }, [products, searchTerm]);
 
   const openCreateForm = () => {
     setMutationError(null);
@@ -56,14 +79,18 @@ export function ProductsPage() {
     try {
       if (formMode === "edit" && selectedProduct) {
         await updateProduct(selectedProduct.id, payload);
+        showToast("success", "Product updated");
       } else {
         const { status: _status, ...createPayload } = payload;
         await createProduct(createPayload);
+        showToast("success", "Product created");
       }
 
       closeForm();
     } catch {
-      setMutationError("Unable to save product. Please check the details.");
+      const message = "Unable to save product. Please check the details.";
+      setMutationError(message);
+      showToast("error", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -90,8 +117,11 @@ export function ProductsPage() {
     try {
       await archiveProduct(productToArchive.id);
       closeArchiveDialog();
+      showToast("success", "Product archived");
     } catch {
-      setMutationError("Unable to archive product. Please try again.");
+      const message = "Unable to archive product. Please try again.";
+      setMutationError(message);
+      showToast("error", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -108,7 +138,9 @@ export function ProductsPage() {
       <Card className="content-card">
         <MasterDataToolbar
           onRetry={() => void reload()}
+          onSearchChange={setSearchTerm}
           searchPlaceholder="Search products"
+          searchValue={searchTerm}
           showRetry={Boolean(error)}
         />
 
@@ -117,12 +149,14 @@ export function ProductsPage() {
         ) : error ? (
           <MasterDataErrorState message={error} />
         ) : products.length === 0 ? (
-          <MasterDataEmptyState message="No products yet. Create the first catalog product." />
+          <MasterDataEmptyState message="No products yet. Create your first product or add one during Stock In." />
+        ) : filteredProducts.length === 0 ? (
+          <MasterDataEmptyState message="No products match your search." />
         ) : (
           <ProductTable
             onArchive={openArchiveDialog}
             onEdit={openEditForm}
-            products={products}
+            products={filteredProducts}
           />
         )}
       </Card>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { StockAdjustmentDetailsDialog } from "../components/stock-adjustments/StockAdjustmentDetailsDialog";
 import { StockAdjustmentForm } from "../components/stock-adjustments/StockAdjustmentForm";
@@ -9,6 +9,7 @@ import { MasterDataLoadingState } from "../components/master-data/MasterDataLoad
 import { MasterDataPageHeader } from "../components/master-data/MasterDataPageHeader";
 import { MasterDataToolbar } from "../components/master-data/MasterDataToolbar";
 import { Card } from "../components/ui/Card";
+import { useToast } from "../components/ui/ToastProvider";
 import { useStockAdjustments } from "../hooks/useStockAdjustments";
 import type {
   CreateStockAdjustmentPayload,
@@ -30,8 +31,28 @@ export function StockAdjustmentsPage() {
   const [selectedAdjustment, setSelectedAdjustment] =
     useState<StockAdjustment | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { showToast } = useToast();
+
+  const filteredStockAdjustments = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    if (!query) {
+      return stockAdjustments;
+    }
+
+    return stockAdjustments.filter((adjustment) =>
+      [
+        adjustment.reason,
+        adjustment.notes,
+        adjustment.adjustedByUser.displayName,
+        ...adjustment.items.map((item) => item.product?.name),
+      ]
+        .filter(Boolean)
+        .some((value) => value?.toLowerCase().includes(query)),
+    );
+  }, [searchTerm, stockAdjustments]);
 
   const closeForm = () => {
     setIsFormOpen(false);
@@ -41,18 +62,18 @@ export function StockAdjustmentsPage() {
   const handleCreate = async (payload: CreateStockAdjustmentPayload) => {
     setIsSubmitting(true);
     setMutationError(null);
-    setSuccessMessage(null);
 
     try {
       await createStockAdjustment(payload);
       closeForm();
-      setSuccessMessage("Stock adjustment applied successfully.");
+      showToast("success", "Stock adjustment applied");
     } catch (caughtError) {
-      setMutationError(
+      const message =
         caughtError instanceof Error
           ? caughtError.message
-          : "Unable to apply stock adjustment.",
-      );
+          : "Unable to apply stock adjustment.";
+      setMutationError(message);
+      showToast("error", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -65,7 +86,9 @@ export function StockAdjustmentsPage() {
       const detail = await getStockAdjustment(stockAdjustment.id);
       setSelectedAdjustment(detail);
     } catch {
-      setMutationError("Unable to load stock adjustment details.");
+      const message = "Unable to load stock adjustment details.";
+      setMutationError(message);
+      showToast("error", message);
     }
   };
 
@@ -75,15 +98,10 @@ export function StockAdjustmentsPage() {
         actionLabel="New Adjustment"
         eyebrow="Inventory"
         onAction={() => {
-          setSuccessMessage(null);
           setIsFormOpen(true);
         }}
         title="Stock Adjustments"
       />
-
-      {successMessage ? (
-        <Card className="state-panel success-state">{successMessage}</Card>
-      ) : null}
 
       {mutationError && !isFormOpen && !selectedAdjustment ? (
         <Card className="state-panel error-state">{mutationError}</Card>
@@ -92,7 +110,9 @@ export function StockAdjustmentsPage() {
       <Card className="content-card">
         <MasterDataToolbar
           onRetry={() => void reload()}
+          onSearchChange={setSearchTerm}
           searchPlaceholder="Search adjustments"
+          searchValue={searchTerm}
           showRetry={Boolean(error)}
         />
 
@@ -101,11 +121,13 @@ export function StockAdjustmentsPage() {
         ) : error ? (
           <MasterDataErrorState message={error} />
         ) : stockAdjustments.length === 0 ? (
-          <MasterDataEmptyState message="No stock adjustments yet." />
+          <MasterDataEmptyState message="No adjustments have been recorded." />
+        ) : filteredStockAdjustments.length === 0 ? (
+          <MasterDataEmptyState message="No stock adjustments match your search." />
         ) : (
           <StockAdjustmentTable
             onView={(stockAdjustment) => void openDetails(stockAdjustment)}
-            stockAdjustments={stockAdjustments}
+            stockAdjustments={filteredStockAdjustments}
           />
         )}
       </Card>

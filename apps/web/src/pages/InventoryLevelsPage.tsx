@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { ExpiringSoonTable } from "../components/inventory-levels/ExpiringSoonTable";
 import { InventoryLevelsTable } from "../components/inventory-levels/InventoryLevelsTable";
@@ -8,7 +8,9 @@ import { MasterDataEmptyState } from "../components/master-data/MasterDataEmptyS
 import { MasterDataErrorState } from "../components/master-data/MasterDataErrorState";
 import { MasterDataLoadingState } from "../components/master-data/MasterDataLoadingState";
 import { MasterDataPageHeader } from "../components/master-data/MasterDataPageHeader";
+import { MasterDataToolbar } from "../components/master-data/MasterDataToolbar";
 import { Card } from "../components/ui/Card";
+import { useToast } from "../components/ui/ToastProvider";
 import { useInventoryLevels } from "../hooks/useInventoryLevels";
 import type {
   InventoryLevel,
@@ -38,6 +40,44 @@ export function InventoryLevelsPage() {
     useState<ProductInventoryDetails | null>(null);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { showToast } = useToast();
+
+  const matchesInventoryQuery = (
+    item: Pick<InventoryLevel, "name" | "sku" | "brand" | "category">,
+  ) => {
+    const query = searchTerm.trim().toLowerCase();
+
+    if (!query) {
+      return true;
+    }
+
+    return [item.name, item.sku, item.brand?.name, item.category?.name]
+      .filter(Boolean)
+      .some((value) => value?.toLowerCase().includes(query));
+  };
+
+  const filteredInventoryLevels = useMemo(
+    () => inventoryLevels.filter(matchesInventoryQuery),
+    [inventoryLevels, searchTerm],
+  );
+  const filteredLowStockLevels = useMemo(
+    () => lowStockLevels.filter(matchesInventoryQuery),
+    [lowStockLevels, searchTerm],
+  );
+  const filteredExpiringSoonBatches = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    if (!query) {
+      return expiringSoonBatches;
+    }
+
+    return expiringSoonBatches.filter((batch) =>
+      [batch.product.name, batch.product.sku, batch.lotNumber]
+        .filter(Boolean)
+        .some((value) => value?.toLowerCase().includes(query)),
+    );
+  }, [expiringSoonBatches, searchTerm]);
 
   const openBatchDetails = async (inventoryLevel: InventoryLevel) => {
     setDetailsError(null);
@@ -47,7 +87,9 @@ export function InventoryLevelsPage() {
       const details = await getProductInventoryDetails(inventoryLevel.id);
       setSelectedDetails(details);
     } catch {
-      setDetailsError("Unable to load product batches. Please try again.");
+      const message = "Unable to load product batches. Please try again.";
+      setDetailsError(message);
+      showToast("error", message);
     } finally {
       setIsLoadingDetails(false);
     }
@@ -57,24 +99,30 @@ export function InventoryLevelsPage() {
     if (activeTab === "low") {
       return lowStockLevels.length === 0 ? (
         <MasterDataEmptyState message="No low-stock products right now." />
+      ) : filteredLowStockLevels.length === 0 ? (
+        <MasterDataEmptyState message="No low-stock products match your search." />
       ) : (
-        <LowStockTable inventoryLevels={lowStockLevels} />
+        <LowStockTable inventoryLevels={filteredLowStockLevels} />
       );
     }
 
     if (activeTab === "expiring") {
       return expiringSoonBatches.length === 0 ? (
         <MasterDataEmptyState message="No batches expiring soon." />
+      ) : filteredExpiringSoonBatches.length === 0 ? (
+        <MasterDataEmptyState message="No expiring batches match your search." />
       ) : (
-        <ExpiringSoonTable batches={expiringSoonBatches} />
+        <ExpiringSoonTable batches={filteredExpiringSoonBatches} />
       );
     }
 
     return inventoryLevels.length === 0 ? (
-      <MasterDataEmptyState message="No inventory levels found." />
+      <MasterDataEmptyState message="No inventory available. Receive inventory through Stock In." />
+    ) : filteredInventoryLevels.length === 0 ? (
+      <MasterDataEmptyState message="No inventory items match your search." />
     ) : (
       <InventoryLevelsTable
-        inventoryLevels={inventoryLevels}
+        inventoryLevels={filteredInventoryLevels}
         onViewBatches={(item) => void openBatchDetails(item)}
       />
     );
@@ -110,6 +158,14 @@ export function InventoryLevelsPage() {
             </button>
           ) : null}
         </div>
+
+        <MasterDataToolbar
+          onRetry={() => void reload()}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Search inventory"
+          searchValue={searchTerm}
+          showRetry={Boolean(error)}
+        />
 
         {isLoading ? (
           <MasterDataLoadingState message="Loading inventory levels..." />
