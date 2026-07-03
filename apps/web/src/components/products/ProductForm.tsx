@@ -5,6 +5,7 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
 import { Textarea } from "../ui/Textarea";
+import { isPharmaceuticalCategory } from "../../lib/product-categories";
 import type {
   Product,
   ProductFormValues,
@@ -47,7 +48,10 @@ const toOptionalNumber = (value: string) =>
 
 const toOptionalId = (value: string) => value || null;
 
-const toPayload = (values: ProductFormValues): ProductPayload => ({
+const toPayload = (
+  values: ProductFormValues,
+  selectedCategory: ProductLookupData["categories"][number] | null,
+): ProductPayload => ({
   sku: values.sku.trim() || null,
   name: values.name.trim(),
   categoryId: values.categoryId,
@@ -55,7 +59,9 @@ const toPayload = (values: ProductFormValues): ProductPayload => ({
   genericDrugId: toOptionalId(values.genericDrugId),
   dosageFormId: toOptionalId(values.dosageFormId),
   classificationId: toOptionalId(values.classificationId),
-  productType: values.productType,
+  productType: isPharmaceuticalCategory(selectedCategory)
+    ? "MEDICINE"
+    : "NON_MEDICINE",
   defaultSellingPrice: toOptionalNumber(values.defaultSellingPrice),
   reorderLevel: Number(values.reorderLevel),
   requiresPrescription: values.requiresPrescription,
@@ -116,7 +122,10 @@ export function ProductForm({
     [lookups],
   );
 
-  const showMedicineFields = values.productType === "MEDICINE";
+  const selectedCategory = lookupOptions.categories.find(
+    (category) => category.id === values.categoryId,
+  );
+  const showMedicineFields = isPharmaceuticalCategory(selectedCategory);
 
   const title = product ? "Edit Product" : "New Product";
 
@@ -160,7 +169,7 @@ export function ProductForm({
     }
 
     setValidationError(null);
-    await onSubmit(toPayload(values));
+    await onSubmit(toPayload(values, selectedCategory ?? null));
   };
 
   return (
@@ -208,19 +217,6 @@ export function ProductForm({
                   {category.name}
                 </option>
               ))}
-            </Select>
-            <Select
-              label="Product Type"
-              onChange={(event) =>
-                updateValue(
-                  "productType",
-                  event.target.value as ProductFormValues["productType"],
-                )
-              }
-              value={values.productType}
-            >
-              <option value="MEDICINE">Medicine</option>
-              <option value="NON_MEDICINE">Non-Medicine</option>
             </Select>
             <Select
               label="Brand"
