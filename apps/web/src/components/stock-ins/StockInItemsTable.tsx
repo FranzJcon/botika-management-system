@@ -1,7 +1,7 @@
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
-import { Select } from "../ui/Select";
 import { Textarea } from "../ui/Textarea";
+import { ProductPicker } from "./ProductPicker";
 import type { Product } from "../../types/product";
 import type { StockInItemFormValues } from "../../types/stock-in";
 
@@ -15,6 +15,7 @@ type StockInItemsTableProps = {
   ) => void;
   onAdd: () => void;
   onRemove: (id: string) => void;
+  onQuickAddProduct: (itemId: string, initialName: string) => void;
 };
 
 export function StockInItemsTable({
@@ -22,10 +23,9 @@ export function StockInItemsTable({
   onAdd,
   onChange,
   onRemove,
+  onQuickAddProduct,
   products,
 }: StockInItemsTableProps) {
-  const activeProducts = products.filter((product) => product.status === "ACTIVE");
-
   return (
     <div className="stock-items">
       <div className="stock-items-header">
@@ -48,21 +48,14 @@ export function StockInItemsTable({
             </div>
 
             <div className="stock-item-grid">
-              <Select
-                label="Product"
-                onChange={(event) =>
-                  onChange(item.id, "productId", event.target.value)
+              <ProductPicker
+                onChange={(productId) => onChange(item.id, "productId", productId)}
+                onQuickAdd={(initialName) =>
+                  onQuickAddProduct(item.id, initialName)
                 }
-                required
+                products={products}
                 value={item.productId}
-              >
-                <option value="">Select product</option>
-                {activeProducts.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name}
-                  </option>
-                ))}
-              </Select>
+              />
               <Input
                 label="Quantity"
                 min="0.001"

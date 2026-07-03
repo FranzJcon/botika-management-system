@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { apiGet, apiPost } from "../lib/api";
-import type { Product } from "../types/product";
+import type { Category } from "../types/category";
+import type { Product, ProductPayload } from "../types/product";
 import type { CreateStockInPayload, StockIn } from "../types/stock-in";
 
 export function useStockIns() {
   const [stockIns, setStockIns] = useState<StockIn[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,13 +17,15 @@ export function useStockIns() {
     setError(null);
 
     try {
-      const [stockInData, productData] = await Promise.all([
+      const [stockInData, productData, categoryData] = await Promise.all([
         apiGet<StockIn[]>("/stock-ins"),
         apiGet<Product[]>("/products"),
+        apiGet<Category[]>("/categories"),
       ]);
 
       setStockIns(stockInData);
       setProducts(productData);
+      setCategories(categoryData);
     } catch {
       setError("Unable to load stock-ins. Please try again.");
     } finally {
@@ -40,6 +44,13 @@ export function useStockIns() {
     await loadStockIns();
   };
 
+  const createProduct = async (payload: ProductPayload) => {
+    const product = await apiPost<Product>("/products", payload);
+    await loadStockIns();
+
+    return product;
+  };
+
   const postStockIn = async (id: string) => {
     await apiPost<StockIn>(`/stock-ins/${id}/post`, {});
     await loadStockIns();
@@ -48,11 +59,13 @@ export function useStockIns() {
   return {
     stockIns,
     products,
+    categories,
     isLoading,
     error,
     reload: loadStockIns,
     getStockIn,
     createStockIn,
+    createProduct,
     postStockIn,
   };
 }

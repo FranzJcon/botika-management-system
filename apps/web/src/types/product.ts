@@ -50,12 +50,17 @@ export type ProductFormValues = {
 export type ProductPayload = {
   sku?: string | null;
   name: string;
-  categoryId: string;
-  brandId: string;
-  genericDrugId: string;
-  dosageFormId: string;
-  classificationId: string;
+  categoryId?: string | null;
+  brandId?: string | null;
+  genericDrugId?: string | null;
+  dosageFormId?: string | null;
+  classificationId?: string | null;
   defaultSellingPrice?: number | null;
-  reorderLevel: number;
+  reorderLevel?: number;
+  unit?: string;
+  productType?: "MEDICINE" | "NON_MEDICINE";
+  requiresPrescription?: boolean;
+  requiresExpiryTracking?: boolean;
+  requiresLotTracking?: boolean;
   status?: ProductStatus;
 };

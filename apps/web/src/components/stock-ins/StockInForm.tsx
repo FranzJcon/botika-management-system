@@ -5,8 +5,11 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
 import { Textarea } from "../ui/Textarea";
+import { QuickAddProductModal } from "../products/QuickAddProductModal";
+import type { Category } from "../../types/category";
 import { StockInItemsTable } from "./StockInItemsTable";
 import type { Product } from "../../types/product";
+import type { ProductPayload } from "../../types/product";
 import type {
   CreateStockInPayload,
   StockInFormValues,
@@ -17,10 +20,12 @@ import type {
 
 type StockInFormProps = {
   products: Product[];
+  categories: Category[];
   isSubmitting: boolean;
   error: string | null;
   onClose: () => void;
   onSubmit: (payload: CreateStockInPayload) => Promise<void>;
+  onCreateProduct: (payload: ProductPayload) => Promise<Product>;
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -68,12 +73,20 @@ const toPayload = (values: StockInFormValues): CreateStockInPayload => ({
 export function StockInForm({
   error,
   isSubmitting,
+  categories,
+  onCreateProduct,
   onClose,
   onSubmit,
   products,
 }: StockInFormProps) {
   const [values, setValues] = useState<StockInFormValues>(initialValues);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [quickAddTarget, setQuickAddTarget] = useState<{
+    itemId: string;
+    initialName: string;
+  } | null>(null);
+  const [quickAddError, setQuickAddError] = useState<string | null>(null);
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
 
   const updateValue = <TField extends keyof StockInFormValues>(
     field: TField,
@@ -110,6 +123,25 @@ export function StockInForm({
       ...current,
       items: current.items.filter((item) => item.id !== id),
     }));
+  };
+
+  const handleQuickAddProduct = async (payload: ProductPayload) => {
+    if (!quickAddTarget) {
+      return;
+    }
+
+    setIsQuickAdding(true);
+    setQuickAddError(null);
+
+    try {
+      const product = await onCreateProduct(payload);
+      updateItem(quickAddTarget.itemId, "productId", product.id);
+      setQuickAddTarget(null);
+    } catch {
+      setQuickAddError("Unable to create product. Please try again.");
+    } finally {
+      setIsQuickAdding(false);
+    }
   };
 
   const validate = () => {
@@ -234,6 +266,9 @@ export function StockInForm({
             items={values.items}
             onAdd={addItem}
             onChange={updateItem}
+            onQuickAddProduct={(itemId, initialName) =>
+              setQuickAddTarget({ itemId, initialName })
+            }
             onRemove={removeItem}
             products={products}
           />
@@ -251,6 +286,19 @@ export function StockInForm({
           </div>
         </form>
       </section>
+      {quickAddTarget ? (
+        <QuickAddProductModal
+          categories={categories}
+          error={quickAddError}
+          initialName={quickAddTarget.initialName}
+          isSubmitting={isQuickAdding}
+          onClose={() => {
+            setQuickAddTarget(null);
+            setQuickAddError(null);
+          }}
+          onSubmit={handleQuickAddProduct}
+        />
+      ) : null}
     </div>
   );
 }

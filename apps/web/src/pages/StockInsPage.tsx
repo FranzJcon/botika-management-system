@@ -16,6 +16,8 @@ import type { CreateStockInPayload, StockIn } from "../types/stock-in";
 export function StockInsPage() {
   const {
     createStockIn,
+    createProduct,
+    categories,
     error,
     getStockIn,
     isLoading,
@@ -130,7 +132,9 @@ export function StockInsPage() {
       {isFormOpen ? (
         <StockInForm
           error={mutationError}
+          categories={categories}
           isSubmitting={isSubmitting}
+          onCreateProduct={createProduct}
           onClose={closeForm}
           onSubmit={handleCreate}
           products={products}

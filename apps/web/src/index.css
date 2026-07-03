@@ -731,6 +731,61 @@ a {
   padding: 14px;
 }
 
+.product-picker {
+  position: relative;
+}
+
+.product-picker-menu {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  left: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+}
+
+.product-picker-option {
+  background: var(--surface);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.product-picker-option:hover,
+.product-picker-option.highlighted {
+  background: var(--surface-muted);
+}
+
+.product-picker-option span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.product-picker-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.product-picker-empty p {
+  color: var(--text-muted);
+  margin: 0;
+}
+
 .detail-grid {
   display: grid;
   gap: 12px;
