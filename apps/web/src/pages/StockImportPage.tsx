@@ -14,11 +14,14 @@ import { useStockImport } from "../hooks/useStockImport";
 import { isPharmaceuticalCategory } from "../lib/product-categories";
 import type { Category } from "../types/category";
 import type { DosageForm } from "../types/dosage-form";
+import type { GenericDrug } from "../types/generic-drug";
 import type { Product, ProductPayload } from "../types/product";
+import type { ProductClassification } from "../types/product-classification";
 import type { CreateStockInPayload } from "../types/stock-in";
 import type {
   StockImportParsedRow,
   StockImportRow,
+  StockImportSuggestionConfidence,
   StockImportRowStatus,
 } from "../types/stock-import";
 
@@ -33,15 +36,52 @@ const supportedHeaders = {
 
 const dosageFormNameSuggestions = [
   { keyword: "suspension", dosageForm: "Suspension" },
+  { keyword: "suppository", dosageForm: "Suppository" },
   { keyword: "ointment", dosageForm: "Ointment" },
   { keyword: "solution", dosageForm: "Solution" },
   { keyword: "capsule", dosageForm: "Capsule" },
   { keyword: "inhaler", dosageForm: "Inhaler" },
+  { keyword: "ampoule", dosageForm: "Ampoule" },
+  { keyword: "sachet", dosageForm: "Sachet" },
+  { keyword: "powder", dosageForm: "Powder" },
+  { keyword: "nebule", dosageForm: "Nebule" },
+  { keyword: "lotion", dosageForm: "Lotion" },
   { keyword: "tablet", dosageForm: "Tablet" },
   { keyword: "syrup", dosageForm: "Syrup" },
   { keyword: "cream", dosageForm: "Cream" },
   { keyword: "drops", dosageForm: "Drops" },
+  { keyword: "spray", dosageForm: "Spray" },
+  { keyword: "patch", dosageForm: "Patch" },
+  { keyword: "vial", dosageForm: "Vial" },
+  { keyword: "gel", dosageForm: "Gel" },
+  { keyword: "tab", dosageForm: "Tablet" },
   { keyword: "cap", dosageForm: "Capsule" },
+];
+
+const genericDrugNameSuggestions = [
+  { keyword: "biogesic", genericDrug: "Paracetamol" },
+  {
+    keyword: "bioflu",
+    genericDrug: "Phenylephrine + Paracetamol + Chlorphenamine",
+  },
+  { keyword: "amoxicillin", genericDrug: "Amoxicillin" },
+  { keyword: "losartan", genericDrug: "Losartan" },
+  { keyword: "metformin", genericDrug: "Metformin" },
+  { keyword: "cetirizine", genericDrug: "Cetirizine" },
+  { keyword: "omeprazole", genericDrug: "Omeprazole" },
+  { keyword: "salbutamol", genericDrug: "Salbutamol" },
+  { keyword: "mefenamic", genericDrug: "Mefenamic Acid" },
+  { keyword: "vitamin c", genericDrug: "Ascorbic Acid" },
+];
+
+const classificationNameSuggestions = [
+  { keyword: "paracetamol", classification: "Analgesic" },
+  { keyword: "amoxicillin", classification: "Antibiotic" },
+  { keyword: "cetirizine", classification: "Antihistamine" },
+  { keyword: "losartan", classification: "Antihypertensive" },
+  { keyword: "metformin", classification: "Antidiabetic" },
+  { keyword: "omeprazole", classification: "Proton Pump Inhibitor" },
+  { keyword: "salbutamol", classification: "Bronchodilator" },
 ];
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -161,17 +201,66 @@ const detectDosageForm = (productName: string, dosageForms: DosageForm[]) => {
   return findByName(dosageForms, suggestion.dosageForm) ?? null;
 };
 
+const detectGenericDrug = (productName: string, genericDrugs: GenericDrug[]) => {
+  const normalizedName = productName.toLowerCase();
+  const suggestion = genericDrugNameSuggestions.find(({ keyword }) =>
+    normalizedName.includes(keyword),
+  );
+
+  if (!suggestion) {
+    return null;
+  }
+
+  return findByName(genericDrugs, suggestion.genericDrug) ?? null;
+};
+
+const detectClassification = (
+  productName: string,
+  genericDrug: GenericDrug | null,
+  classifications: ProductClassification[],
+) => {
+  const normalizedName = `${productName} ${genericDrug?.name ?? ""}`.toLowerCase();
+  const suggestion = classificationNameSuggestions.find(({ keyword }) =>
+    normalizedName.includes(keyword),
+  );
+
+  if (!suggestion) {
+    return null;
+  }
+
+  return findByName(classifications, suggestion.classification) ?? null;
+};
+
 const buildNewProductSuggestions = (
   productName: string,
   categories: Category[],
   dosageForms: DosageForm[],
+  genericDrugs: GenericDrug[],
+  classifications: ProductClassification[],
 ) => {
   const suggestedDosageForm = detectDosageForm(productName, dosageForms);
+  const suggestedGenericDrug = detectGenericDrug(productName, genericDrugs);
+  const suggestedClassification = detectClassification(
+    productName,
+    suggestedGenericDrug,
+    classifications,
+  );
   const pharmaceuticalCategory = findByName(categories, "Pharmaceuticals");
+  const appearsToBeMedicine = Boolean(
+    suggestedDosageForm || suggestedGenericDrug || suggestedClassification,
+  );
+  const confidence: StockImportSuggestionConfidence = suggestedGenericDrug
+    ? "HIGH_CONFIDENCE"
+    : appearsToBeMedicine
+      ? "SUGGESTED"
+      : "NEEDS_REVIEW";
 
   return {
-    categoryId: suggestedDosageForm ? pharmaceuticalCategory?.id ?? "" : "",
+    categoryId: appearsToBeMedicine ? pharmaceuticalCategory?.id ?? "" : "",
+    genericDrugId: suggestedGenericDrug?.id ?? "",
     dosageFormId: suggestedDosageForm?.id ?? "",
+    classificationId: suggestedClassification?.id ?? "",
+    confidence,
   };
 };
 
@@ -187,7 +276,7 @@ const validateRows = (rows: StockImportRow[]) => {
   }
 
   if (rows.some((row) => !row.productId)) {
-    return "Please match or quick add all products before creating a Stock In draft.";
+    return "Please match or create all products before creating a Stock In draft.";
   }
 
   for (const row of rows) {
@@ -211,6 +300,24 @@ const statusLabel = (status: StockImportRowStatus) => {
   return status === "MATCHED" ? "Matched" : "Unmatched / New Product Needed";
 };
 
+const confidenceLabel = (confidence: StockImportSuggestionConfidence) => {
+  if (confidence === "HIGH_CONFIDENCE") {
+    return "High Confidence";
+  }
+
+  return confidence === "SUGGESTED" ? "Suggested" : "Needs Review";
+};
+
+const confidenceClassName = (confidence: StockImportSuggestionConfidence) => {
+  if (confidence === "HIGH_CONFIDENCE") {
+    return "status-pill active";
+  }
+
+  return confidence === "SUGGESTED"
+    ? "status-pill warning"
+    : "status-pill archived";
+};
+
 export function StockImportPage() {
   const {
     categories,
@@ -218,6 +325,7 @@ export function StockImportPage() {
     createStockInDraft,
     dosageForms,
     error,
+    genericDrugs,
     isLoading,
     productClassifications,
     products,
@@ -244,6 +352,7 @@ export function StockImportPage() {
   ).length;
   const activeCategories = activeOnly(categories);
   const activeDosageForms = activeOnly(dosageForms);
+  const activeGenericDrugs = activeOnly(genericDrugs);
   const activeProductClassifications = activeOnly(productClassifications);
 
   const currentStep = useMemo(() => {
@@ -263,6 +372,8 @@ export function StockImportPage() {
     productList: Product[],
     categoryList: Category[],
     dosageFormList: DosageForm[],
+    genericDrugList: GenericDrug[],
+    classificationList: ProductClassification[],
   ): StockImportRow[] =>
     parsedRows.map((row) => {
       const match = findProductMatch(productList, row.productName);
@@ -270,6 +381,8 @@ export function StockImportPage() {
         row.productName,
         categoryList,
         dosageFormList,
+        genericDrugList,
+        classificationList,
       );
 
       return {
@@ -278,8 +391,10 @@ export function StockImportPage() {
         productId: match?.id ?? "",
         status: match ? "MATCHED" : "UNMATCHED",
         newProductCategoryId: match ? "" : suggestions.categoryId,
+        newProductGenericDrugId: match ? "" : suggestions.genericDrugId,
         newProductDosageFormId: match ? "" : suggestions.dosageFormId,
-        newProductClassificationId: "",
+        newProductClassificationId: match ? "" : suggestions.classificationId,
+        suggestionConfidence: match ? "HIGH_CONFIDENCE" : suggestions.confidence,
         isSelectedForBulk: !match,
         quantity: row.quantity,
         buyingPrice: row.buyingPrice,
@@ -307,7 +422,16 @@ export function StockImportPage() {
 
     try {
       const parsedRows = await parseWorkbookRows(file);
-      setRows(buildRows(parsedRows, products, categories, dosageForms));
+      setRows(
+        buildRows(
+          parsedRows,
+          products,
+          categories,
+          dosageForms,
+          genericDrugs,
+          productClassifications,
+        ),
+      );
       showToast("success", "Excel file parsed");
     } catch {
       const message = "Unable to parse Excel file. Please check the template.";
@@ -322,7 +446,7 @@ export function StockImportPage() {
     rowId: string,
     field: Exclude<
       keyof StockImportRow,
-      "id" | "status" | "isSelectedForBulk"
+      "id" | "status" | "suggestionConfidence" | "isSelectedForBulk"
     >,
     value: string,
   ) => {
@@ -424,6 +548,7 @@ export function StockImportPage() {
         const payload: ProductPayload = {
           name: row.sourceProductName.trim(),
           categoryId: row.newProductCategoryId,
+          genericDrugId: row.newProductGenericDrugId || null,
           dosageFormId: row.newProductDosageFormId || null,
           classificationId: row.newProductClassificationId || null,
           defaultSellingPrice: row.sellingPrice.trim()
@@ -696,9 +821,11 @@ export function StockImportPage() {
                             <th>Select</th>
                             <th>Product Name</th>
                             <th>Category</th>
+                            <th>Generic Drug</th>
                             <th>Dosage Form</th>
                             <th>Product Classification</th>
                             <th>Selling Price</th>
+                            <th>Confidence</th>
                             <th>Status</th>
                           </tr>
                         </thead>
@@ -744,6 +871,28 @@ export function StockImportPage() {
                                   {activeCategories.map((category) => (
                                     <option key={category.id} value={category.id}>
                                       {category.name}
+                                    </option>
+                                  ))}
+                                </Select>
+                              </td>
+                              <td>
+                                <Select
+                                  onChange={(event) =>
+                                    updateRow(
+                                      row.id,
+                                      "newProductGenericDrugId",
+                                      event.target.value,
+                                    )
+                                  }
+                                  value={row.newProductGenericDrugId}
+                                >
+                                  <option value="">None</option>
+                                  {activeGenericDrugs.map((genericDrug) => (
+                                    <option
+                                      key={genericDrug.id}
+                                      value={genericDrug.id}
+                                    >
+                                      {genericDrug.name}
                                     </option>
                                   ))}
                                 </Select>
@@ -808,6 +957,15 @@ export function StockImportPage() {
                                   type="number"
                                   value={row.sellingPrice}
                                 />
+                              </td>
+                              <td>
+                                <span
+                                  className={confidenceClassName(
+                                    row.suggestionConfidence,
+                                  )}
+                                >
+                                  {confidenceLabel(row.suggestionConfidence)}
+                                </span>
                               </td>
                               <td>
                                 <span className="status-pill archived">

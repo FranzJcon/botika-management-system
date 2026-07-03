@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiGet, apiPost } from "../lib/api";
 import type { Category } from "../types/category";
 import type { DosageForm } from "../types/dosage-form";
+import type { GenericDrug } from "../types/generic-drug";
 import type { Product, ProductPayload } from "../types/product";
 import type { ProductClassification } from "../types/product-classification";
 import type { CreateStockInPayload, StockIn } from "../types/stock-in";
@@ -11,6 +12,7 @@ export function useStockImport() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [dosageForms, setDosageForms] = useState<DosageForm[]>([]);
+  const [genericDrugs, setGenericDrugs] = useState<GenericDrug[]>([]);
   const [productClassifications, setProductClassifications] = useState<
     ProductClassification[]
   >([]);
@@ -26,17 +28,20 @@ export function useStockImport() {
         productData,
         categoryData,
         dosageFormData,
+        genericDrugData,
         productClassificationData,
       ] = await Promise.all([
         apiGet<Product[]>("/products"),
         apiGet<Category[]>("/categories"),
         apiGet<DosageForm[]>("/dosage-forms"),
+        apiGet<GenericDrug[]>("/generic-drugs"),
         apiGet<ProductClassification[]>("/product-classifications"),
       ]);
 
       setProducts(productData);
       setCategories(categoryData);
       setDosageForms(dosageFormData);
+      setGenericDrugs(genericDrugData);
       setProductClassifications(productClassificationData);
     } catch {
       setError("Unable to load import lookups. Please try again.");
@@ -65,6 +70,7 @@ export function useStockImport() {
     createStockInDraft,
     dosageForms,
     error,
+    genericDrugs,
     isLoading,
     productClassifications,
     products,
