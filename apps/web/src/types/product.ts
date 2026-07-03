@@ -5,6 +5,7 @@ import type { GenericDrug } from "./generic-drug";
 import type { ProductClassification } from "./product-classification";
 
 export type ProductStatus = "ACTIVE" | "INACTIVE" | "DISCONTINUED";
+export type ProductType = "MEDICINE" | "NON_MEDICINE";
 
 export type Product = {
   id: string;
@@ -17,6 +18,10 @@ export type Product = {
   brandId: string | null;
   defaultSellingPrice: string | number | null;
   reorderLevel: string | number;
+  productType: ProductType;
+  requiresPrescription: boolean;
+  requiresExpiryTracking: boolean;
+  requiresLotTracking: boolean;
   status: ProductStatus;
   category: Category | null;
   classification: ProductClassification | null;
@@ -41,8 +46,12 @@ export type ProductFormValues = {
   genericDrugId: string;
   dosageFormId: string;
   classificationId: string;
+  productType: ProductType;
   defaultSellingPrice: string;
   reorderLevel: string;
+  requiresPrescription: boolean;
+  requiresExpiryTracking: boolean;
+  requiresLotTracking: boolean;
   description: string;
   status: ProductStatus;
 };
@@ -58,7 +67,7 @@ export type ProductPayload = {
   defaultSellingPrice?: number | null;
   reorderLevel?: number;
   unit?: string;
-  productType?: "MEDICINE" | "NON_MEDICINE";
+  productType?: ProductType;
   requiresPrescription?: boolean;
   requiresExpiryTracking?: boolean;
   requiresLotTracking?: boolean;

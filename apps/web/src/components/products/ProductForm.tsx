@@ -5,7 +5,6 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
 import { Textarea } from "../ui/Textarea";
-import { isPharmaceuticalCategory } from "../../lib/product-categories";
 import type {
   Product,
   ProductFormValues,
@@ -30,8 +29,12 @@ const emptyValues: ProductFormValues = {
   genericDrugId: "",
   dosageFormId: "",
   classificationId: "",
+  productType: "NON_MEDICINE",
   defaultSellingPrice: "",
   reorderLevel: "0",
+  requiresPrescription: false,
+  requiresExpiryTracking: false,
+  requiresLotTracking: false,
   description: "",
   status: "ACTIVE",
 };
@@ -52,8 +55,12 @@ const toPayload = (values: ProductFormValues): ProductPayload => ({
   genericDrugId: toOptionalId(values.genericDrugId),
   dosageFormId: toOptionalId(values.dosageFormId),
   classificationId: toOptionalId(values.classificationId),
+  productType: values.productType,
   defaultSellingPrice: toOptionalNumber(values.defaultSellingPrice),
   reorderLevel: Number(values.reorderLevel),
+  requiresPrescription: values.requiresPrescription,
+  requiresExpiryTracking: values.requiresExpiryTracking,
+  requiresLotTracking: values.requiresLotTracking,
   status: values.status,
 });
 
@@ -83,11 +90,15 @@ export function ProductForm({
       genericDrugId: product.genericDrugId ?? "",
       dosageFormId: product.dosageFormId ?? "",
       classificationId: product.classificationId ?? "",
+      productType: product.productType,
       defaultSellingPrice:
         product.defaultSellingPrice === null
           ? ""
           : String(product.defaultSellingPrice),
       reorderLevel: String(product.reorderLevel ?? 0),
+      requiresPrescription: product.requiresPrescription,
+      requiresExpiryTracking: product.requiresExpiryTracking,
+      requiresLotTracking: product.requiresLotTracking,
       description: "",
       status: product.status,
     });
@@ -105,14 +116,18 @@ export function ProductForm({
     [lookups],
   );
 
-  const selectedCategory = lookups.categories.find(
-    (category) => category.id === values.categoryId,
-  );
-  const showPharmaceuticalFields = isPharmaceuticalCategory(selectedCategory);
+  const showMedicineFields = values.productType === "MEDICINE";
 
   const title = product ? "Edit Product" : "New Product";
 
   const updateValue = (name: keyof ProductFormValues, value: string) => {
+    setValues((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  };
+
+  const updateBoolean = (name: keyof ProductFormValues, value: boolean) => {
     setValues((current) => ({
       ...current,
       [name]: value,
@@ -195,6 +210,19 @@ export function ProductForm({
               ))}
             </Select>
             <Select
+              label="Product Type"
+              onChange={(event) =>
+                updateValue(
+                  "productType",
+                  event.target.value as ProductFormValues["productType"],
+                )
+              }
+              value={values.productType}
+            >
+              <option value="MEDICINE">Medicine</option>
+              <option value="NON_MEDICINE">Non-Medicine</option>
+            </Select>
+            <Select
               label="Brand"
               onChange={(event) => updateValue("brandId", event.target.value)}
               value={values.brandId}
@@ -206,7 +234,7 @@ export function ProductForm({
                 </option>
               ))}
             </Select>
-            {showPharmaceuticalFields ? (
+            {showMedicineFields ? (
               <>
                 <Select
                   label="Generic Drug"
@@ -250,6 +278,36 @@ export function ProductForm({
                     </option>
                   ))}
                 </Select>
+                <label className="checkbox-field">
+                  <input
+                    checked={values.requiresPrescription}
+                    onChange={(event) =>
+                      updateBoolean("requiresPrescription", event.target.checked)
+                    }
+                    type="checkbox"
+                  />
+                  <span>Requires Prescription</span>
+                </label>
+                <label className="checkbox-field">
+                  <input
+                    checked={values.requiresExpiryTracking}
+                    onChange={(event) =>
+                      updateBoolean("requiresExpiryTracking", event.target.checked)
+                    }
+                    type="checkbox"
+                  />
+                  <span>Requires Expiry Tracking</span>
+                </label>
+                <label className="checkbox-field">
+                  <input
+                    checked={values.requiresLotTracking}
+                    onChange={(event) =>
+                      updateBoolean("requiresLotTracking", event.target.checked)
+                    }
+                    type="checkbox"
+                  />
+                  <span>Requires Lot Tracking</span>
+                </label>
               </>
             ) : null}
             <Select

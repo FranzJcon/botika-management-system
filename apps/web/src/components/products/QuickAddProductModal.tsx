@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
+import { isPharmaceuticalCategory } from "../../lib/product-categories";
 import type { Category } from "../../types/category";
 import type { ProductPayload } from "../../types/product";
 
@@ -45,13 +46,17 @@ export function QuickAddProductModal({
       return;
     }
 
+    const selectedCategory = categories.find((category) => category.id === categoryId);
+
     setValidationError(null);
     await onSubmit({
       name: name.trim(),
       categoryId,
       defaultSellingPrice: sellingPrice.trim() ? Number(sellingPrice) : null,
       unit: "piece",
-      productType: "NON_MEDICINE",
+      productType: isPharmaceuticalCategory(selectedCategory)
+        ? "MEDICINE"
+        : "NON_MEDICINE",
       reorderLevel: 0,
       requiresPrescription: false,
       requiresExpiryTracking: false,

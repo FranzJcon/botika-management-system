@@ -18,6 +18,15 @@ describe("inventory levels", () => {
   it("returns total quantity on hand from available batches", async () => {
     const { product } = await postStockInWithQuantity(100);
 
+    await prisma.product.update({
+      where: {
+        id: product.id,
+      },
+      data: {
+        defaultSellingPrice: 8,
+      },
+    });
+
     const response = await request(app).get("/inventory-levels").expect(200);
 
     const inventoryLevel = response.body.find(
@@ -25,6 +34,6 @@ describe("inventory levels", () => {
     );
 
     expect(inventoryLevel.totalQuantityOnHand).toBe(100);
-    expect(Number(inventoryLevel.sellingPrice)).toBe(5);
+    expect(Number(inventoryLevel.sellingPrice)).toBe(8);
   });
 });

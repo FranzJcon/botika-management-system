@@ -32,11 +32,15 @@ const getCurrentSellingPrice = (product: {
     sellingPrice: unknown;
   }>;
 }) => {
+  if (product.defaultSellingPrice !== null) {
+    return product.defaultSellingPrice;
+  }
+
   const nextAvailableBatch = product.inventoryBatches.find(
     (batch) => batch.sellingPrice !== null,
   );
 
-  return nextAvailableBatch?.sellingPrice ?? product.defaultSellingPrice ?? 0;
+  return nextAvailableBatch?.sellingPrice ?? 0;
 };
 
 export const getInventoryLevels = async () => {
