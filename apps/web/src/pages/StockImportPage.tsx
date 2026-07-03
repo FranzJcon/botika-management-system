@@ -5,13 +5,15 @@ import { MasterDataEmptyState } from "../components/master-data/MasterDataEmptyS
 import { MasterDataErrorState } from "../components/master-data/MasterDataErrorState";
 import { MasterDataLoadingState } from "../components/master-data/MasterDataLoadingState";
 import { MasterDataPageHeader } from "../components/master-data/MasterDataPageHeader";
-import { QuickAddProductModal } from "../components/products/QuickAddProductModal";
-import { ProductPicker } from "../components/stock-ins/ProductPicker";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
+import { Select } from "../components/ui/Select";
 import { useToast } from "../components/ui/ToastProvider";
 import { useStockImport } from "../hooks/useStockImport";
+import { isPharmaceuticalCategory } from "../lib/product-categories";
+import type { Category } from "../types/category";
+import type { DosageForm } from "../types/dosage-form";
 import type { Product, ProductPayload } from "../types/product";
 import type { CreateStockInPayload } from "../types/stock-in";
 import type {
@@ -19,12 +21,6 @@ import type {
   StockImportRow,
   StockImportRowStatus,
 } from "../types/stock-import";
-
-type QuickAddTarget = {
-  rowId: string;
-  initialName: string;
-  initialSellingPrice: string;
-};
 
 const supportedHeaders = {
   productName: "product name",
@@ -34,6 +30,19 @@ const supportedHeaders = {
   lotNumber: "lot number",
   expirationDate: "expiration date",
 };
+
+const dosageFormNameSuggestions = [
+  { keyword: "suspension", dosageForm: "Suspension" },
+  { keyword: "ointment", dosageForm: "Ointment" },
+  { keyword: "solution", dosageForm: "Solution" },
+  { keyword: "capsule", dosageForm: "Capsule" },
+  { keyword: "inhaler", dosageForm: "Inhaler" },
+  { keyword: "tablet", dosageForm: "Tablet" },
+  { keyword: "syrup", dosageForm: "Syrup" },
+  { keyword: "cream", dosageForm: "Cream" },
+  { keyword: "drops", dosageForm: "Drops" },
+  { keyword: "cap", dosageForm: "Capsule" },
+];
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -131,6 +140,41 @@ const findProductMatch = (products: Product[], productName: string) => {
   );
 };
 
+const activeOnly = <TItem extends { isActive: boolean }>(items: TItem[]) =>
+  items.filter((item) => item.isActive);
+
+const findByName = <TItem extends { name: string }>(
+  items: TItem[],
+  name: string,
+) => items.find((item) => item.name.trim().toLowerCase() === name.toLowerCase());
+
+const detectDosageForm = (productName: string, dosageForms: DosageForm[]) => {
+  const normalizedName = productName.toLowerCase();
+  const suggestion = dosageFormNameSuggestions.find(({ keyword }) =>
+    normalizedName.includes(keyword),
+  );
+
+  if (!suggestion) {
+    return null;
+  }
+
+  return findByName(dosageForms, suggestion.dosageForm) ?? null;
+};
+
+const buildNewProductSuggestions = (
+  productName: string,
+  categories: Category[],
+  dosageForms: DosageForm[],
+) => {
+  const suggestedDosageForm = detectDosageForm(productName, dosageForms);
+  const pharmaceuticalCategory = findByName(categories, "Pharmaceuticals");
+
+  return {
+    categoryId: suggestedDosageForm ? pharmaceuticalCategory?.id ?? "" : "",
+    dosageFormId: suggestedDosageForm?.id ?? "",
+  };
+};
+
 const getRowStatus = (
   row: StockImportRow,
 ): StockImportRowStatus => {
@@ -172,8 +216,10 @@ export function StockImportPage() {
     categories,
     createProduct,
     createStockInDraft,
+    dosageForms,
     error,
     isLoading,
+    productClassifications,
     products,
     reload,
   } = useStockImport();
@@ -185,14 +231,20 @@ export function StockImportPage() {
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [isCreatingDraft, setIsCreatingDraft] = useState(false);
-  const [quickAddTarget, setQuickAddTarget] = useState<QuickAddTarget | null>(
-    null,
-  );
-  const [quickAddError, setQuickAddError] = useState<string | null>(null);
-  const [isQuickAdding, setIsQuickAdding] = useState(false);
+  const [bulkCategoryId, setBulkCategoryId] = useState("");
+  const [bulkDosageFormId, setBulkDosageFormId] = useState("");
+  const [bulkClassificationId, setBulkClassificationId] = useState("");
+  const [isCreatingProducts, setIsCreatingProducts] = useState(false);
 
   const matchedCount = rows.filter((row) => row.productId).length;
   const canCreateDraft = rows.length > 0 && matchedCount === rows.length;
+  const unmatchedRows = rows.filter((row) => row.status === "UNMATCHED");
+  const selectedUnmatchedCount = unmatchedRows.filter(
+    (row) => row.isSelectedForBulk,
+  ).length;
+  const activeCategories = activeOnly(categories);
+  const activeDosageForms = activeOnly(dosageForms);
+  const activeProductClassifications = activeOnly(productClassifications);
 
   const currentStep = useMemo(() => {
     if (rows.length === 0) {
@@ -209,15 +261,26 @@ export function StockImportPage() {
   const buildRows = (
     parsedRows: StockImportParsedRow[],
     productList: Product[],
+    categoryList: Category[],
+    dosageFormList: DosageForm[],
   ): StockImportRow[] =>
     parsedRows.map((row) => {
       const match = findProductMatch(productList, row.productName);
+      const suggestions = buildNewProductSuggestions(
+        row.productName,
+        categoryList,
+        dosageFormList,
+      );
 
       return {
         id: crypto.randomUUID(),
         sourceProductName: row.productName,
         productId: match?.id ?? "",
         status: match ? "MATCHED" : "UNMATCHED",
+        newProductCategoryId: match ? "" : suggestions.categoryId,
+        newProductDosageFormId: match ? "" : suggestions.dosageFormId,
+        newProductClassificationId: "",
+        isSelectedForBulk: !match,
         quantity: row.quantity,
         buyingPrice: row.buyingPrice,
         sellingPrice: row.sellingPrice,
@@ -244,7 +307,7 @@ export function StockImportPage() {
 
     try {
       const parsedRows = await parseWorkbookRows(file);
-      setRows(buildRows(parsedRows, products));
+      setRows(buildRows(parsedRows, products, categories, dosageForms));
       showToast("success", "Excel file parsed");
     } catch {
       const message = "Unable to parse Excel file. Please check the template.";
@@ -257,7 +320,10 @@ export function StockImportPage() {
 
   const updateRow = (
     rowId: string,
-    field: keyof Omit<StockImportRow, "id" | "status">,
+    field: Exclude<
+      keyof StockImportRow,
+      "id" | "status" | "isSelectedForBulk"
+    >,
     value: string,
   ) => {
     setRows((current) =>
@@ -279,31 +345,123 @@ export function StockImportPage() {
     );
   };
 
-  const handleQuickAddProduct = async (payload: ProductPayload) => {
-    if (!quickAddTarget) {
+  const updateRowSelection = (rowId: string, isSelectedForBulk: boolean) => {
+    setRows((current) =>
+      current.map((row) =>
+        row.id === rowId ? { ...row, isSelectedForBulk } : row,
+      ),
+    );
+  };
+
+  const updateAllUnmatchedSelection = (isSelectedForBulk: boolean) => {
+    setRows((current) =>
+      current.map((row) =>
+        row.status === "UNMATCHED" ? { ...row, isSelectedForBulk } : row,
+      ),
+    );
+  };
+
+  const applyToSelectedUnmatchedRows = (
+    field:
+      | "newProductCategoryId"
+      | "newProductDosageFormId"
+      | "newProductClassificationId",
+    value: string,
+  ) => {
+    if (!value) {
       return;
     }
 
-    setIsQuickAdding(true);
-    setQuickAddError(null);
+    setRows((current) =>
+      current.map((row) =>
+        row.status === "UNMATCHED" && row.isSelectedForBulk
+          ? { ...row, [field]: value }
+          : row,
+      ),
+    );
+  };
+
+  const validateNewProductRows = () => {
+    if (unmatchedRows.length === 0) {
+      return "There are no unmatched products to create.";
+    }
+
+    for (const row of unmatchedRows) {
+      if (!row.sourceProductName.trim()) {
+        return "Product name is required for every new product.";
+      }
+
+      if (!row.newProductCategoryId) {
+        return "Category is required for every new product.";
+      }
+
+      if (row.sellingPrice.trim() && Number(row.sellingPrice) < 0) {
+        return "Selling price must be zero or greater for every new product.";
+      }
+    }
+
+    return null;
+  };
+
+  const handleCreateProducts = async () => {
+    const validationMessage = validateNewProductRows();
+
+    if (validationMessage) {
+      setMutationError(validationMessage);
+      showToast("error", validationMessage);
+      return;
+    }
+
+    setIsCreatingProducts(true);
+    setMutationError(null);
 
     try {
-      const product = await createProduct(payload);
-      setRows((current) =>
-        current.map((row) =>
-          row.id === quickAddTarget.rowId
-            ? { ...row, productId: product.id, status: "MATCHED" }
-            : row,
-        ),
-      );
-      setQuickAddTarget(null);
-      showToast("success", "Product created and matched");
+      for (const row of unmatchedRows) {
+        const selectedCategory =
+          categories.find(
+            (category) => category.id === row.newProductCategoryId,
+          ) ?? null;
+        const payload: ProductPayload = {
+          name: row.sourceProductName.trim(),
+          categoryId: row.newProductCategoryId,
+          dosageFormId: row.newProductDosageFormId || null,
+          classificationId: row.newProductClassificationId || null,
+          defaultSellingPrice: row.sellingPrice.trim()
+            ? Number(row.sellingPrice)
+            : null,
+          unit: "piece",
+          productType: isPharmaceuticalCategory(selectedCategory)
+            ? "MEDICINE"
+            : "NON_MEDICINE",
+          reorderLevel: 0,
+          requiresPrescription: false,
+          requiresExpiryTracking: false,
+          requiresLotTracking: false,
+        };
+
+        const product = await createProduct(payload);
+
+        setRows((current) =>
+          current.map((currentRow) =>
+            currentRow.id === row.id
+              ? {
+                  ...currentRow,
+                  productId: product.id,
+                  status: "MATCHED",
+                  isSelectedForBulk: false,
+                }
+              : currentRow,
+          ),
+        );
+      }
+
+      showToast("success", "New products created");
     } catch {
-      const message = "Unable to create product. Please try again.";
-      setQuickAddError(message);
+      const message = "Unable to create all products. Please review the rows.";
+      setMutationError(message);
       showToast("error", message);
     } finally {
-      setIsQuickAdding(false);
+      setIsCreatingProducts(false);
     }
   };
 
@@ -417,9 +575,251 @@ export function StockImportPage() {
 
                 {!canCreateDraft ? (
                   <p className="form-error">
-                    Please match or quick add all products before creating a
+                    Please match or create all products before creating a
                     Stock In draft.
                   </p>
+                ) : null}
+
+                {unmatchedRows.length > 0 ? (
+                  <div className="stock-import-new-products">
+                    <div className="stock-import-section-header">
+                      <div>
+                        <p className="eyebrow">Review</p>
+                        <h3>New Products to Create</h3>
+                      </div>
+                      <Button
+                        disabled={isCreatingProducts}
+                        onClick={() => void handleCreateProducts()}
+                      >
+                        {isCreatingProducts ? "Creating..." : "Create Products"}
+                      </Button>
+                    </div>
+
+                    <div className="stock-import-bulk-controls">
+                      <label className="checkbox-field">
+                        <input
+                          checked={
+                            unmatchedRows.length > 0 &&
+                            selectedUnmatchedCount === unmatchedRows.length
+                          }
+                          onChange={(event) =>
+                            updateAllUnmatchedSelection(event.target.checked)
+                          }
+                          type="checkbox"
+                        />
+                        <span>Select all unmatched</span>
+                      </label>
+                      <Select
+                        label="Bulk Category"
+                        onChange={(event) => setBulkCategoryId(event.target.value)}
+                        value={bulkCategoryId}
+                      >
+                        <option value="">Select category</option>
+                        {activeCategories.map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </Select>
+                      <Button
+                        disabled={!bulkCategoryId || selectedUnmatchedCount === 0}
+                        variant="secondary"
+                        onClick={() =>
+                          applyToSelectedUnmatchedRows(
+                            "newProductCategoryId",
+                            bulkCategoryId,
+                          )
+                        }
+                      >
+                        Apply Category
+                      </Button>
+                      <Select
+                        label="Bulk Dosage Form"
+                        onChange={(event) =>
+                          setBulkDosageFormId(event.target.value)
+                        }
+                        value={bulkDosageFormId}
+                      >
+                        <option value="">Select dosage form</option>
+                        {activeDosageForms.map((dosageForm) => (
+                          <option key={dosageForm.id} value={dosageForm.id}>
+                            {dosageForm.name}
+                          </option>
+                        ))}
+                      </Select>
+                      <Button
+                        disabled={!bulkDosageFormId || selectedUnmatchedCount === 0}
+                        variant="secondary"
+                        onClick={() =>
+                          applyToSelectedUnmatchedRows(
+                            "newProductDosageFormId",
+                            bulkDosageFormId,
+                          )
+                        }
+                      >
+                        Apply Dosage
+                      </Button>
+                      <Select
+                        label="Bulk Classification"
+                        onChange={(event) =>
+                          setBulkClassificationId(event.target.value)
+                        }
+                        value={bulkClassificationId}
+                      >
+                        <option value="">Select classification</option>
+                        {activeProductClassifications.map((classification) => (
+                          <option key={classification.id} value={classification.id}>
+                            {classification.name}
+                          </option>
+                        ))}
+                      </Select>
+                      <Button
+                        disabled={
+                          !bulkClassificationId || selectedUnmatchedCount === 0
+                        }
+                        variant="secondary"
+                        onClick={() =>
+                          applyToSelectedUnmatchedRows(
+                            "newProductClassificationId",
+                            bulkClassificationId,
+                          )
+                        }
+                      >
+                        Apply Classification
+                      </Button>
+                    </div>
+
+                    <div className="table-wrap">
+                      <table className="table stock-import-new-products-table">
+                        <thead>
+                          <tr>
+                            <th>Select</th>
+                            <th>Product Name</th>
+                            <th>Category</th>
+                            <th>Dosage Form</th>
+                            <th>Product Classification</th>
+                            <th>Selling Price</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {unmatchedRows.map((row) => (
+                            <tr key={row.id}>
+                              <td>
+                                <input
+                                  checked={row.isSelectedForBulk}
+                                  onChange={(event) =>
+                                    updateRowSelection(
+                                      row.id,
+                                      event.target.checked,
+                                    )
+                                  }
+                                  type="checkbox"
+                                />
+                              </td>
+                              <td>
+                                <Input
+                                  onChange={(event) =>
+                                    updateRow(
+                                      row.id,
+                                      "sourceProductName",
+                                      event.target.value,
+                                    )
+                                  }
+                                  value={row.sourceProductName}
+                                />
+                              </td>
+                              <td>
+                                <Select
+                                  onChange={(event) =>
+                                    updateRow(
+                                      row.id,
+                                      "newProductCategoryId",
+                                      event.target.value,
+                                    )
+                                  }
+                                  value={row.newProductCategoryId}
+                                >
+                                  <option value="">Select category</option>
+                                  {activeCategories.map((category) => (
+                                    <option key={category.id} value={category.id}>
+                                      {category.name}
+                                    </option>
+                                  ))}
+                                </Select>
+                              </td>
+                              <td>
+                                <Select
+                                  onChange={(event) =>
+                                    updateRow(
+                                      row.id,
+                                      "newProductDosageFormId",
+                                      event.target.value,
+                                    )
+                                  }
+                                  value={row.newProductDosageFormId}
+                                >
+                                  <option value="">None</option>
+                                  {activeDosageForms.map((dosageForm) => (
+                                    <option
+                                      key={dosageForm.id}
+                                      value={dosageForm.id}
+                                    >
+                                      {dosageForm.name}
+                                    </option>
+                                  ))}
+                                </Select>
+                              </td>
+                              <td>
+                                <Select
+                                  onChange={(event) =>
+                                    updateRow(
+                                      row.id,
+                                      "newProductClassificationId",
+                                      event.target.value,
+                                    )
+                                  }
+                                  value={row.newProductClassificationId}
+                                >
+                                  <option value="">None</option>
+                                  {activeProductClassifications.map(
+                                    (classification) => (
+                                      <option
+                                        key={classification.id}
+                                        value={classification.id}
+                                      >
+                                        {classification.name}
+                                      </option>
+                                    ),
+                                  )}
+                                </Select>
+                              </td>
+                              <td>
+                                <Input
+                                  min="0"
+                                  onChange={(event) =>
+                                    updateRow(
+                                      row.id,
+                                      "sellingPrice",
+                                      event.target.value,
+                                    )
+                                  }
+                                  step="0.01"
+                                  type="number"
+                                  value={row.sellingPrice}
+                                />
+                              </td>
+                              <td>
+                                <span className="status-pill archived">
+                                  {statusLabel(row.status)}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 ) : null}
 
                 <div className="table-wrap">
@@ -444,21 +844,24 @@ export function StockImportPage() {
                             <strong>{row.sourceProductName || "Unnamed row"}</strong>
                           </td>
                           <td className="stock-import-product-cell">
-                            <ProductPicker
-                              onChange={(productId) =>
-                                updateRow(row.id, "productId", productId)
+                            <Select
+                              onChange={(event) =>
+                                updateRow(
+                                  row.id,
+                                  "productId",
+                                  event.target.value,
+                                )
                               }
-                              onQuickAdd={(initialName) =>
-                                setQuickAddTarget({
-                                  rowId: row.id,
-                                  initialName:
-                                    initialName || row.sourceProductName,
-                                  initialSellingPrice: row.sellingPrice,
-                                })
-                              }
-                              products={products}
                               value={row.productId}
-                            />
+                            >
+                              <option value="">Unmatched</option>
+                              {products.map((product) => (
+                                <option key={product.id} value={product.id}>
+                                  {product.name}
+                                  {product.sku ? ` (${product.sku})` : ""}
+                                </option>
+                              ))}
+                            </Select>
                           </td>
                           <td>
                             <span
@@ -535,18 +938,7 @@ export function StockImportPage() {
                           </td>
                           <td>
                             {row.status === "UNMATCHED" ? (
-                              <Button
-                                variant="secondary"
-                                onClick={() =>
-                                  setQuickAddTarget({
-                                    rowId: row.id,
-                                    initialName: row.sourceProductName,
-                                    initialSellingPrice: row.sellingPrice,
-                                  })
-                                }
-                              >
-                                Quick Add Product
-                              </Button>
+                              <span className="muted-text">Review below</span>
                             ) : (
                               <span className="muted-text">Ready</span>
                             )}
@@ -571,20 +963,6 @@ export function StockImportPage() {
         )}
       </Card>
 
-      {quickAddTarget ? (
-        <QuickAddProductModal
-          categories={categories}
-          error={quickAddError}
-          initialName={quickAddTarget.initialName}
-          initialSellingPrice={quickAddTarget.initialSellingPrice}
-          isSubmitting={isQuickAdding}
-          onClose={() => {
-            setQuickAddTarget(null);
-            setQuickAddError(null);
-          }}
-          onSubmit={handleQuickAddProduct}
-        />
-      ) : null}
     </section>
   );
 }

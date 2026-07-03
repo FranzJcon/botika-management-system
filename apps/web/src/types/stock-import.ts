@@ -7,6 +7,10 @@ export type StockImportRow = {
   sourceProductName: string;
   productId: string;
   status: StockImportRowStatus;
+  newProductCategoryId: string;
+  newProductDosageFormId: string;
+  newProductClassificationId: string;
+  isSelectedForBulk: boolean;
   quantity: string;
   buyingPrice: string;
   sellingPrice: string;
