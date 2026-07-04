@@ -945,6 +945,70 @@ a {
   margin-bottom: 16px;
 }
 
+.stock-import-process {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.stock-import-process span {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 9px;
+}
+
+.import-source-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.import-source-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 142px;
+  padding: 14px;
+  text-align: left;
+}
+
+.import-source-card:hover:not(:disabled),
+.import-source-card-selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.import-source-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.import-source-card span {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.import-source-card .import-source-card-title {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.import-source-card strong {
+  margin-top: auto;
+}
+
 .stock-import-summary {
   display: flex;
   flex-wrap: wrap;
@@ -1077,6 +1141,7 @@ a {
   .stock-adjustment-product-select,
   .stock-import-bulk-controls,
   .stock-import-upload,
+  .import-source-grid,
   .detail-grid {
     grid-template-columns: 1fr;
   }

@@ -1,11 +1,13 @@
 import { excelImportParser } from "./excel-parser";
-import type { ImportedRow, ImportParser, ImportSource } from "../../types/import-engine";
+import type { ImportParser, ImportSource } from "../../types/import-engine";
 
 type ImportSourceOption = {
   value: ImportSource;
   label: string;
+  title: string;
+  description: string;
   enabled: boolean;
-  accept: string;
+  acceptedExtensions: string[];
   parser?: ImportParser;
 };
 
@@ -13,27 +15,35 @@ export const importSourceOptions: ImportSourceOption[] = [
   {
     value: "EXCEL",
     label: "Excel",
+    title: "Excel Spreadsheet",
+    description: "Import inventory from supplier spreadsheets.",
     enabled: true,
-    accept: ".xlsx",
+    acceptedExtensions: [".xlsx"],
     parser: excelImportParser,
   },
   {
     value: "CSV",
     label: "CSV (Coming Soon)",
+    title: "CSV File",
+    description: "Import tabular supplier files exported as CSV.",
     enabled: false,
-    accept: ".csv",
+    acceptedExtensions: [".csv"],
   },
   {
     value: "PDF",
     label: "PDF (Coming Soon)",
+    title: "Supplier PDF",
+    description: "Import supplier invoices exported as PDF.",
     enabled: false,
-    accept: ".pdf",
+    acceptedExtensions: [".pdf"],
   },
   {
     value: "OCR",
     label: "Image / OCR (Coming Soon)",
+    title: "Supplier Image",
+    description: "Import printed invoices or photos using OCR.",
     enabled: false,
-    accept: "image/*",
+    acceptedExtensions: [".jpg", ".jpeg", ".png", ".webp"],
   },
 ];
 
@@ -41,15 +51,24 @@ export const getImportSourceOption = (source: ImportSource) =>
   importSourceOptions.find((option) => option.value === source) ??
   importSourceOptions[0];
 
-export const parseImportFile = async (
-  source: ImportSource,
-  file: File,
-): Promise<ImportedRow[]> => {
+export const getImportParser = (source: ImportSource) => {
   const option = getImportSourceOption(source);
 
   if (!option.enabled || !option.parser) {
     throw new Error("Import source is not supported yet.");
   }
 
-  return option.parser.parse(file);
+  return option.parser;
+};
+
+export const getAcceptedFileDescription = (source: ImportSource) =>
+  getImportSourceOption(source).acceptedExtensions.join(", ");
+
+export const isAcceptedImportFile = (source: ImportSource, file: File) => {
+  const option = getImportSourceOption(source);
+  const fileName = file.name.toLowerCase();
+
+  return option.acceptedExtensions.some((extension) =>
+    fileName.endsWith(extension),
+  );
 };
