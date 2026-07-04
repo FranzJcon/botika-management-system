@@ -11,28 +11,24 @@ import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import { useToast } from "../components/ui/ToastProvider";
 import { useStockImport } from "../hooks/useStockImport";
+import {
+  getImportSourceOption,
+  importSourceOptions,
+  parseImportFile,
+} from "../lib/import-engine/parsers";
 import { isPharmaceuticalCategory } from "../lib/product-categories";
 import type { Category } from "../types/category";
 import type { DosageForm } from "../types/dosage-form";
 import type { GenericDrug } from "../types/generic-drug";
+import type { ImportedRow, ImportSource } from "../types/import-engine";
 import type { Product, ProductPayload } from "../types/product";
 import type { ProductClassification } from "../types/product-classification";
 import type { CreateStockInPayload } from "../types/stock-in";
 import type {
-  StockImportParsedRow,
   StockImportRow,
   StockImportSuggestionConfidence,
   StockImportRowStatus,
 } from "../types/stock-import";
-
-const supportedHeaders = {
-  productName: "product name",
-  quantity: "quantity",
-  buyingPrice: "buying price",
-  sellingPrice: "selling price",
-  lotNumber: "lot number",
-  expirationDate: "expiration date",
-};
 
 const dosageFormNameSuggestions = [
   { keyword: "suspension", dosageForm: "Suspension" },
@@ -86,96 +82,28 @@ const classificationNameSuggestions = [
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-const normalize = (value: unknown) => String(value ?? "").trim().toLowerCase();
-
 const optionalText = (value: string) => value.trim() || null;
 
-const formatExcelDate = (
-  value: unknown,
-  parseDateCode: (value: number) => { y: number; m: number; d: number } | null,
+const findProductMatch = (
+  products: Product[],
+  importedRow: Pick<ImportedRow, "productName" | "sku">,
 ) => {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return value.toISOString().slice(0, 10);
-  }
+  const skuQuery = importedRow.sku?.trim().toLowerCase();
+  const productNameQuery = importedRow.productName.trim().toLowerCase();
 
-  if (typeof value === "number") {
-    const parsed = parseDateCode(value);
-
-    if (parsed) {
-      const month = String(parsed.m).padStart(2, "0");
-      const day = String(parsed.d).padStart(2, "0");
-
-      return `${parsed.y}-${month}-${day}`;
-    }
-  }
-
-  return String(value ?? "").trim();
-};
-
-const getCell = (
-  row: Record<string, unknown>,
-  headerLookup: Map<string, string>,
-  header: string,
-) => {
-  const actualHeader = headerLookup.get(header);
-
-  return actualHeader ? row[actualHeader] : "";
-};
-
-const parseWorkbookRows = async (file: File): Promise<StockImportParsedRow[]> => {
-  const XLSX = await import("xlsx");
-  const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { cellDates: true, type: "array" });
-  const firstSheetName = workbook.SheetNames[0];
-
-  if (!firstSheetName) {
-    return [];
-  }
-
-  const sheet = workbook.Sheets[firstSheetName];
-  const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-    defval: "",
-  });
-
-  return rawRows
-    .map((row) => {
-      const headerLookup = new Map(
-        Object.keys(row).map((key) => [normalize(key), key]),
-      );
-
-      return {
-        productName: String(
-          getCell(row, headerLookup, supportedHeaders.productName),
-        ).trim(),
-        quantity: String(getCell(row, headerLookup, supportedHeaders.quantity))
-          .trim(),
-        buyingPrice: String(
-          getCell(row, headerLookup, supportedHeaders.buyingPrice),
-        ).trim(),
-        sellingPrice: String(
-          getCell(row, headerLookup, supportedHeaders.sellingPrice),
-        ).trim(),
-        lotNumber: String(getCell(row, headerLookup, supportedHeaders.lotNumber))
-          .trim(),
-        expirationDate: formatExcelDate(
-          getCell(row, headerLookup, supportedHeaders.expirationDate),
-          XLSX.SSF.parse_date_code,
-        ),
-      };
-    })
-    .filter((row) => row.productName || row.quantity || row.buyingPrice);
-};
-
-const findProductMatch = (products: Product[], productName: string) => {
-  const query = productName.trim().toLowerCase();
-
-  if (!query) {
+  if (!skuQuery && !productNameQuery) {
     return null;
   }
 
   return (
-    products.find((product) => product.sku?.toLowerCase() === query) ??
-    products.find((product) => product.name.toLowerCase() === query) ??
+    (skuQuery
+      ? products.find((product) => product.sku?.toLowerCase() === skuQuery)
+      : null) ??
+    (productNameQuery
+      ? products.find(
+          (product) => product.name.toLowerCase() === productNameQuery,
+        )
+      : null) ??
     null
   );
 };
@@ -334,6 +262,7 @@ export function StockImportPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [rows, setRows] = useState<StockImportRow[]>([]);
+  const [importSource, setImportSource] = useState<ImportSource>("EXCEL");
   const [selectedFileName, setSelectedFileName] = useState("");
   const [parseError, setParseError] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
@@ -354,6 +283,7 @@ export function StockImportPage() {
   const activeDosageForms = activeOnly(dosageForms);
   const activeGenericDrugs = activeOnly(genericDrugs);
   const activeProductClassifications = activeOnly(productClassifications);
+  const selectedImportSourceOption = getImportSourceOption(importSource);
 
   const currentStep = useMemo(() => {
     if (rows.length === 0) {
@@ -368,15 +298,15 @@ export function StockImportPage() {
   }, [canCreateDraft, rows.length]);
 
   const buildRows = (
-    parsedRows: StockImportParsedRow[],
+    importedRows: ImportedRow[],
     productList: Product[],
     categoryList: Category[],
     dosageFormList: DosageForm[],
     genericDrugList: GenericDrug[],
     classificationList: ProductClassification[],
   ): StockImportRow[] =>
-    parsedRows.map((row) => {
-      const match = findProductMatch(productList, row.productName);
+    importedRows.map((row) => {
+      const match = findProductMatch(productList, row);
       const suggestions = buildNewProductSuggestions(
         row.productName,
         categoryList,
@@ -388,6 +318,7 @@ export function StockImportPage() {
       return {
         id: crypto.randomUUID(),
         sourceProductName: row.productName,
+        sourceSku: row.sku ?? "",
         productId: match?.id ?? "",
         status: match ? "MATCHED" : "UNMATCHED",
         newProductCategoryId: match ? "" : suggestions.categoryId,
@@ -398,9 +329,9 @@ export function StockImportPage() {
         isSelectedForBulk: !match,
         quantity: row.quantity,
         buyingPrice: row.buyingPrice,
-        sellingPrice: row.sellingPrice,
-        lotNumber: row.lotNumber,
-        expirationDate: row.expirationDate,
+        sellingPrice: row.sellingPrice ?? "",
+        lotNumber: row.lotNumber ?? "",
+        expirationDate: row.expirationDate ?? "",
       };
     });
 
@@ -412,8 +343,15 @@ export function StockImportPage() {
       return;
     }
 
-    if (!file.name.toLowerCase().endsWith(".xlsx")) {
-      setParseError("Only .xlsx files are supported for Stock Import v1.");
+    if (
+      selectedImportSourceOption.accept &&
+      !file.name
+        .toLowerCase()
+        .endsWith(selectedImportSourceOption.accept.replace("*", ""))
+    ) {
+      setParseError(
+        `Only ${selectedImportSourceOption.accept} files are supported for ${selectedImportSourceOption.label}.`,
+      );
       return;
     }
 
@@ -421,7 +359,7 @@ export function StockImportPage() {
     setIsParsing(true);
 
     try {
-      const parsedRows = await parseWorkbookRows(file);
+      const parsedRows = await parseImportFile(importSource, file);
       setRows(
         buildRows(
           parsedRows,
@@ -665,17 +603,38 @@ export function StockImportPage() {
         ) : (
           <>
             <div className="stock-import-upload">
+              <Select
+                label="Import Source"
+                onChange={(event) => {
+                  setImportSource(event.target.value as ImportSource);
+                  setRows([]);
+                  setSelectedFileName("");
+                  setParseError(null);
+                  setMutationError(null);
+                }}
+                value={importSource}
+              >
+                {importSourceOptions.map((option) => (
+                  <option
+                    disabled={!option.enabled}
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
               <Input
-                accept=".xlsx"
-                label="Excel File"
+                accept={selectedImportSourceOption.accept}
+                label="Import File"
                 onChange={(event) =>
                   void handleUpload(event.target.files?.[0] ?? null)
                 }
                 type="file"
               />
               <span className="muted-text">
-                Supported columns: Product Name, Quantity, Buying Price, Selling
-                Price, Lot Number, Expiration Date.
+                Excel is available now. Future parsers will return the same
+                ImportedRow format for review.
               </span>
             </div>
 
