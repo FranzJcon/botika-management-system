@@ -117,9 +117,9 @@ export function StockInsPage() {
     try {
       await postStockIn(stockInToPost.id);
       closePostDialog();
-      showToast("success", "Stock in posted");
+      showToast("success", "Stock in finalized");
     } catch {
-      const message = "Unable to post stock in. Please try again.";
+      const message = "Unable to finalize stock in. Please try again.";
       setMutationError(message);
       showToast("error", message);
     } finally {

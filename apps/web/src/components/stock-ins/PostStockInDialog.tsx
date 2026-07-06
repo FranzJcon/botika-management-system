@@ -25,8 +25,8 @@ export function PostStockInDialog({
         role="dialog"
       >
         <div>
-          <p className="eyebrow">Post Stock In</p>
-          <h2 id="post-stock-in-title">Post this Stock In?</h2>
+          <p className="eyebrow">Finalize Stock In</p>
+          <h2 id="post-stock-in-title">Finalize this Stock In?</h2>
         </div>
 
         <p className="confirm-message">
@@ -46,7 +46,7 @@ export function PostStockInDialog({
             Cancel
           </Button>
           <Button disabled={isSubmitting} onClick={onConfirm}>
-            {isSubmitting ? "Posting..." : "Post Stock In"}
+            {isSubmitting ? "Finalizing..." : "Finalize Stock In"}
           </Button>
         </div>
       </section>

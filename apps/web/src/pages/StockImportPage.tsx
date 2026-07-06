@@ -86,6 +86,18 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 const optionalText = (value: string) => value.trim() || null;
 
+const toStockInSourceType = (source: ImportSource) => {
+  if (source === "CSV") {
+    return "CSV";
+  }
+
+  if (source === "OCR") {
+    return "OCR";
+  }
+
+  return "EXCEL";
+};
+
 const findProductMatch = (
   products: Product[],
   importedRow: Pick<ImportedRow, "productName" | "sku">,
@@ -248,7 +260,15 @@ const confidenceClassName = (confidence: StockImportSuggestionConfidence) => {
     : "status-pill archived";
 };
 
-export function StockImportPage() {
+type StockImportPageProps = {
+  embedded?: boolean;
+  initialSource?: ImportSource;
+};
+
+export function StockImportPage({
+  embedded = false,
+  initialSource = "EXCEL",
+}: StockImportPageProps) {
   const {
     categories,
     createProduct,
@@ -264,7 +284,7 @@ export function StockImportPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [rows, setRows] = useState<StockImportRow[]>([]);
-  const [importSource, setImportSource] = useState<ImportSource>("EXCEL");
+  const [importSource, setImportSource] = useState<ImportSource>(initialSource);
   const [selectedFileName, setSelectedFileName] = useState("");
   const [parseError, setParseError] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
@@ -546,7 +566,7 @@ export function StockImportPage() {
 
     const payload: CreateStockInPayload = {
       supplierId: null,
-      sourceType: "EXCEL",
+      sourceType: toStockInSourceType(importSource),
       referenceType: null,
       referenceNumber: null,
       receivedDate: today(),
@@ -583,8 +603,10 @@ export function StockImportPage() {
   };
 
   return (
-    <section className="page">
-      <MasterDataPageHeader eyebrow="Inventory" title="Stock Import" />
+    <section className={embedded ? "stock-import-embedded" : "page"}>
+      {embedded ? null : (
+        <MasterDataPageHeader eyebrow="Inventory" title="Stock Import" />
+      )}
 
       <Card className="content-card">
           <div className="stock-import-header">

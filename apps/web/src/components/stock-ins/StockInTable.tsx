@@ -57,7 +57,7 @@ export function StockInTable({ onPost, onView, stockIns }: StockInTableProps) {
           </Button>
           {stockIn.status === "DRAFT" ? (
             <Button variant="secondary" onClick={() => onPost(stockIn)}>
-              Post
+              Finalize Stock In
             </Button>
           ) : null}
         </div>

@@ -6,7 +6,9 @@ import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
 import { Textarea } from "../ui/Textarea";
 import { QuickAddProductModal } from "../products/QuickAddProductModal";
+import { StockImportPage } from "../../pages/StockImportPage";
 import type { Category } from "../../types/category";
+import type { ImportSource } from "../../types/import-engine";
 import { StockInItemsTable } from "./StockInItemsTable";
 import type { Product } from "../../types/product";
 import type { ProductPayload } from "../../types/product";
@@ -52,6 +54,18 @@ const initialValues = (): StockInFormValues => ({
 
 const optionalText = (value: string) => value.trim() || null;
 
+const toImportSource = (sourceType: StockInSourceType): ImportSource => {
+  if (sourceType === "CSV") {
+    return "CSV";
+  }
+
+  if (sourceType === "OCR") {
+    return "OCR";
+  }
+
+  return "EXCEL";
+};
+
 const toPayload = (values: StockInFormValues): CreateStockInPayload => ({
   supplierId: null,
   sourceType: values.sourceType,
@@ -88,6 +102,7 @@ export function StockInForm({
   } | null>(null);
   const [quickAddError, setQuickAddError] = useState<string | null>(null);
   const [isQuickAdding, setIsQuickAdding] = useState(false);
+  const isManualStockIn = values.sourceType === "MANUAL";
 
   const updateValue = <TField extends keyof StockInFormValues>(
     field: TField,
@@ -263,9 +278,12 @@ export function StockInForm({
               value={values.sourceType}
             >
               <option value="MANUAL">Manual</option>
-              <option value="EXCEL">Excel</option>
-              <option value="CSV">CSV</option>
-              <option value="OCR">OCR</option>
+              <option value="EXCEL">Excel Spreadsheet</option>
+              <option value="CSV">CSV File</option>
+              <option disabled value="">
+                Supplier PDF (Coming Soon)
+              </option>
+              <option value="OCR">Supplier Image</option>
               <option value="WO_POS_MIGRATION">WO POS Migration</option>
             </Select>
           </div>
@@ -276,28 +294,41 @@ export function StockInForm({
             value={values.notes}
           />
 
-          <StockInItemsTable
-            items={values.items}
-            onAdd={addItem}
-            onChange={updateItem}
-            onQuickAddProduct={(itemId, initialName) =>
-              setQuickAddTarget({ itemId, initialName })
-            }
-            onRemove={removeItem}
-            products={products}
-          />
+          {isManualStockIn ? (
+            <>
+              <StockInItemsTable
+                items={values.items}
+                onAdd={addItem}
+                onChange={updateItem}
+                onQuickAddProduct={(itemId, initialName) =>
+                  setQuickAddTarget({ itemId, initialName })
+                }
+                onRemove={removeItem}
+                products={products}
+              />
 
-          {validationError ? <p className="form-error">{validationError}</p> : null}
-          {error ? <p className="form-error">{error}</p> : null}
+              {validationError ? (
+                <p className="form-error">{validationError}</p>
+              ) : null}
+              {error ? <p className="form-error">{error}</p> : null}
 
-          <div className="modal-actions">
-            <Button variant="secondary" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button disabled={isSubmitting} type="submit">
-              {isSubmitting ? "Saving..." : "Save Draft"}
-            </Button>
-          </div>
+              <div className="modal-actions">
+                <Button variant="secondary" onClick={handleClose}>
+                  Cancel
+                </Button>
+                <Button disabled={isSubmitting} type="submit">
+                  {isSubmitting ? "Saving..." : "Save Draft"}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="stock-in-import-workflow">
+              <StockImportPage
+                embedded
+                initialSource={toImportSource(values.sourceType)}
+              />
+            </div>
+          )}
         </form>
       </section>
       {quickAddTarget ? (
