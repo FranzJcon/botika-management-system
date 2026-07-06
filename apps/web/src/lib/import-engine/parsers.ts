@@ -72,3 +72,31 @@ export const isAcceptedImportFile = (source: ImportSource, file: File) => {
     fileName.endsWith(extension),
   );
 };
+
+export const getImportSourceForFile = (file: File) => {
+  const fileName = file.name.toLowerCase();
+
+  return (
+    importSourceOptions.find((option) =>
+      option.acceptedExtensions.some((extension) =>
+        fileName.endsWith(extension),
+      ),
+    )?.value ?? null
+  );
+};
+
+export const getUnavailableImportMessage = (source: ImportSource | null) => {
+  if (source === "CSV") {
+    return "CSV import is coming soon.";
+  }
+
+  if (source === "PDF") {
+    return "PDF import is coming soon.";
+  }
+
+  if (source === "OCR") {
+    return "Image/OCR import is coming soon.";
+  }
+
+  return "Unsupported file type. Please upload an Excel .xlsx file.";
+};

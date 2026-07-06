@@ -12,11 +12,9 @@ import { Select } from "../components/ui/Select";
 import { useToast } from "../components/ui/ToastProvider";
 import { useStockImport } from "../hooks/useStockImport";
 import {
-  getAcceptedFileDescription,
-  getImportSourceOption,
+  getImportSourceForFile,
   getImportParser,
-  importSourceOptions,
-  isAcceptedImportFile,
+  getUnavailableImportMessage,
 } from "../lib/import-engine/parsers";
 import { isPharmaceuticalCategory } from "../lib/product-categories";
 import type { Category } from "../types/category";
@@ -262,12 +260,10 @@ const confidenceClassName = (confidence: StockImportSuggestionConfidence) => {
 
 type StockImportPageProps = {
   embedded?: boolean;
-  initialSource?: ImportSource;
 };
 
 export function StockImportPage({
   embedded = false,
-  initialSource = "EXCEL",
 }: StockImportPageProps) {
   const {
     categories,
@@ -284,7 +280,7 @@ export function StockImportPage({
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [rows, setRows] = useState<StockImportRow[]>([]);
-  const [importSource, setImportSource] = useState<ImportSource>(initialSource);
+  const [importSource, setImportSource] = useState<ImportSource>("EXCEL");
   const [selectedFileName, setSelectedFileName] = useState("");
   const [parseError, setParseError] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
@@ -305,12 +301,10 @@ export function StockImportPage({
   const activeDosageForms = activeOnly(dosageForms);
   const activeGenericDrugs = activeOnly(genericDrugs);
   const activeProductClassifications = activeOnly(productClassifications);
-  const selectedImportSourceOption = getImportSourceOption(importSource);
-  const acceptedFileDescription = getAcceptedFileDescription(importSource);
 
   const currentStep = useMemo(() => {
     if (rows.length === 0) {
-      return "Step 1: Choose Source and Upload";
+      return "Step 1: Upload File";
     }
 
     if (!canCreateDraft) {
@@ -319,14 +313,6 @@ export function StockImportPage({
 
     return "Step 3: Review and Create Draft";
   }, [canCreateDraft, rows.length]);
-
-  const selectImportSource = (source: ImportSource) => {
-    setImportSource(source);
-    setRows([]);
-    setSelectedFileName("");
-    setParseError(null);
-    setMutationError(null);
-  };
 
   const buildRows = (
     importedRows: ImportedRow[],
@@ -374,18 +360,21 @@ export function StockImportPage({
       return;
     }
 
-    if (!isAcceptedImportFile(importSource, file)) {
-      setParseError(
-        `${selectedImportSourceOption.title} accepts ${acceptedFileDescription} files.`,
-      );
+    const detectedSource = getImportSourceForFile(file);
+
+    if (detectedSource !== "EXCEL") {
+      setParseError(getUnavailableImportMessage(detectedSource));
+      setRows([]);
+      setSelectedFileName(file.name);
       return;
     }
 
+    setImportSource(detectedSource);
     setSelectedFileName(file.name);
     setIsParsing(true);
 
     try {
-      const parser = getImportParser(importSource);
+      const parser = getImportParser(detectedSource);
       const parsedRows = await parser.parse(file);
       setRows(
         buildRows(
@@ -612,10 +601,10 @@ export function StockImportPage({
           <div className="stock-import-header">
             <div>
               <p className="eyebrow">{currentStep}</p>
-              <h2>Import Center</h2>
+              <h2>Import File</h2>
               <p className="muted-text">
-                Choose a document source, parse it into ImportedRow data, then
-                use the existing review workflow to create a Stock In draft.
+                Upload a supplier file, review matched products, create any new
+                products, then generate a Stock In draft.
               </p>
             </div>
           {error ? (
@@ -632,7 +621,6 @@ export function StockImportPage({
         ) : (
           <>
             <div className="stock-import-process" aria-label="Import process">
-              <span>Choose Source</span>
               <span>Upload File</span>
               <span>Parsing</span>
               <span>Product Matching</span>
@@ -641,47 +629,17 @@ export function StockImportPage({
               <span>Create Stock In Draft</span>
             </div>
 
-            <div className="import-source-grid">
-              {importSourceOptions.map((option) => {
-                const isSelected = option.value === importSource;
-
-                return (
-                  <button
-                    className={
-                      isSelected
-                        ? "import-source-card import-source-card-selected"
-                        : "import-source-card"
-                    }
-                    disabled={!option.enabled}
-                    key={option.value}
-                    onClick={() => selectImportSource(option.value)}
-                    type="button"
-                  >
-                    <span className="import-source-card-title">
-                      {option.title}
-                    </span>
-                    <span>{option.description}</span>
-                    <strong>
-                      {option.enabled ? "Available" : "Coming Soon"}
-                    </strong>
-                  </button>
-                );
-              })}
-            </div>
-
             <div className="stock-import-upload">
               <Input
-                accept={selectedImportSourceOption.acceptedExtensions.join(",")}
-                label="Import File"
+                accept=".xlsx,.csv,.pdf,.jpg,.jpeg,.png,.webp"
+                label="Upload supplier file"
                 onChange={(event) =>
                   void handleUpload(event.target.files?.[0] ?? null)
                 }
                 type="file"
               />
               <span className="muted-text">
-                {selectedImportSourceOption.title} accepts{" "}
-                {acceptedFileDescription}. Every parser returns ImportedRow[]
-                for the same downstream review.
+                Supported now: Excel .xlsx. Coming soon: CSV, PDF, images.
               </span>
             </div>
 
@@ -693,7 +651,7 @@ export function StockImportPage({
             {mutationError ? <p className="form-error">{mutationError}</p> : null}
 
             {rows.length === 0 && !isParsing ? (
-              <MasterDataEmptyState message="No import rows yet. Choose a source and upload a supported file to begin." />
+              <MasterDataEmptyState message="No import rows yet. Upload an .xlsx supplier file to begin." />
             ) : null}
 
             {rows.length > 0 ? (

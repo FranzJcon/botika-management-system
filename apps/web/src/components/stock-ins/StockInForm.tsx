@@ -8,7 +8,6 @@ import { Textarea } from "../ui/Textarea";
 import { QuickAddProductModal } from "../products/QuickAddProductModal";
 import { StockImportPage } from "../../pages/StockImportPage";
 import type { Category } from "../../types/category";
-import type { ImportSource } from "../../types/import-engine";
 import { StockInItemsTable } from "./StockInItemsTable";
 import type { Product } from "../../types/product";
 import type { ProductPayload } from "../../types/product";
@@ -17,7 +16,6 @@ import type {
   StockIn,
   StockInFormValues,
   StockInItemFormValues,
-  StockInSourceType,
   StockReferenceType,
 } from "../../types/stock-in";
 
@@ -80,18 +78,6 @@ const valuesFromStockIn = (stockIn: StockIn): StockInFormValues => ({
 
 const optionalText = (value: string) => value.trim() || null;
 
-const toImportSource = (sourceType: StockInSourceType): ImportSource => {
-  if (sourceType === "CSV") {
-    return "CSV";
-  }
-
-  if (sourceType === "OCR") {
-    return "OCR";
-  }
-
-  return "EXCEL";
-};
-
 const toPayload = (values: StockInFormValues): CreateStockInPayload => ({
   supplierId: null,
   sourceType: values.sourceType,
@@ -133,6 +119,7 @@ export function StockInForm({
   const [isQuickAdding, setIsQuickAdding] = useState(false);
   const isEditing = Boolean(stockIn);
   const isManualStockIn = values.sourceType === "MANUAL" || isEditing;
+  const entryMethod = values.sourceType === "MANUAL" ? "MANUAL" : "IMPORT";
   const title = stockIn ? "Edit Stock In Draft" : "New Stock In";
 
   const updateValue = <TField extends keyof StockInFormValues>(
@@ -304,20 +291,17 @@ export function StockInForm({
               value={values.referenceNumber}
             />
             <Select
-              label="Source Type"
+              label="Entry Method"
               onChange={(event) =>
-                updateValue("sourceType", event.target.value as StockInSourceType)
+                updateValue(
+                  "sourceType",
+                  event.target.value === "MANUAL" ? "MANUAL" : "EXCEL",
+                )
               }
-              value={values.sourceType}
+              value={entryMethod}
             >
-              <option value="MANUAL">Manual</option>
-              <option value="EXCEL">Excel Spreadsheet</option>
-              <option value="CSV">CSV File</option>
-              <option disabled value="">
-                Supplier PDF (Coming Soon)
-              </option>
-              <option value="OCR">Supplier Image</option>
-              <option value="WO_POS_MIGRATION">WO POS Migration</option>
+              <option value="MANUAL">Manual Entry</option>
+              <option value="IMPORT">Import File</option>
             </Select>
           </div>
 
@@ -356,10 +340,7 @@ export function StockInForm({
             </>
           ) : (
             <div className="stock-in-import-workflow">
-              <StockImportPage
-                embedded
-                initialSource={toImportSource(values.sourceType)}
-              />
+              <StockImportPage embedded />
             </div>
           )}
         </form>
