@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { MasterDataEmptyState } from "../components/master-data/MasterDataEmptyState";
@@ -302,18 +302,6 @@ export function StockImportPage({
   const activeGenericDrugs = activeOnly(genericDrugs);
   const activeProductClassifications = activeOnly(productClassifications);
 
-  const currentStep = useMemo(() => {
-    if (rows.length === 0) {
-      return "Step 1: Upload File";
-    }
-
-    if (!canCreateDraft) {
-      return "Step 2: Product Matching and Review";
-    }
-
-    return "Step 3: Review and Create Draft";
-  }, [canCreateDraft, rows.length]);
-
   const buildRows = (
     importedRows: ImportedRow[],
     productList: Product[],
@@ -600,11 +588,10 @@ export function StockImportPage({
       <Card className="content-card">
           <div className="stock-import-header">
             <div>
-              <p className="eyebrow">{currentStep}</p>
               <h2>Import File</h2>
               <p className="muted-text">
-                Upload a supplier file, review matched products, create any new
-                products, then generate a Stock In draft.
+                Upload a supplier file, review the products, then save a Stock
+                In draft.
               </p>
             </div>
           {error ? (
@@ -620,27 +607,47 @@ export function StockImportPage({
           <MasterDataErrorState message={error} />
         ) : (
           <>
-            <div className="stock-import-process" aria-label="Import process">
-              <span>Upload File</span>
-              <span>Parsing</span>
-              <span>Product Matching</span>
-              <span>Smart Product Review</span>
-              <span>Create Products</span>
-              <span>Create Stock In Draft</span>
-            </div>
+            <div className="stock-import-upload-panel">
+              <div className="stock-import-upload-copy">
+                <h3>Upload supplier file</h3>
+                <p>
+                  Choose an Excel .xlsx file from your device. You can review
+                  and adjust rows before saving the draft.
+                </p>
+              </div>
 
-            <div className="stock-import-upload">
-              <Input
-                accept=".xlsx,.csv,.pdf,.jpg,.jpeg,.png,.webp"
-                label="Upload supplier file"
-                onChange={(event) =>
-                  void handleUpload(event.target.files?.[0] ?? null)
-                }
-                type="file"
-              />
-              <span className="muted-text">
-                Supported now: Excel .xlsx. Coming soon: CSV, PDF, images.
-              </span>
+              <label className="stock-import-upload-box">
+                <span className="stock-import-upload-instruction">
+                  Choose an Excel .xlsx file from your device
+                </span>
+                <span className="stock-import-upload-title">Choose File</span>
+                <input
+                  accept=".xlsx,.csv,.pdf,.jpg,.jpeg,.png,.webp"
+                  className="stock-import-file-input"
+                  onChange={(event) =>
+                    void handleUpload(event.target.files?.[0] ?? null)
+                  }
+                  type="file"
+                />
+              </label>
+
+              <div className="stock-import-upload-meta">
+                <div>
+                  <strong>Supported now:</strong>
+                  <span>Excel .xlsx</span>
+                </div>
+                <div>
+                  <strong>Coming soon:</strong>
+                  <span>CSV, PDF, images</span>
+                </div>
+              </div>
+
+              {selectedFileName ? (
+                <p className="stock-import-selected-file">
+                  <span>Selected file:</span>
+                  <strong>{selectedFileName}</strong>
+                </p>
+              ) : null}
             </div>
 
             {isParsing ? (
@@ -651,7 +658,7 @@ export function StockImportPage({
             {mutationError ? <p className="form-error">{mutationError}</p> : null}
 
             {rows.length === 0 && !isParsing ? (
-              <MasterDataEmptyState message="No import rows yet. Upload an .xlsx supplier file to begin." />
+              <MasterDataEmptyState message="No import rows yet. Upload an Excel supplier file to begin." />
             ) : null}
 
             {rows.length > 0 ? (
