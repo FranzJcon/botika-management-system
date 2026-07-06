@@ -795,9 +795,9 @@ export function StockImportPage({
                             <th>Generic Drug</th>
                             <th>Dosage Form</th>
                             <th>Product Classification</th>
+                            <th>Buying Price</th>
                             <th>Selling Price</th>
                             <th>Confidence</th>
-                            <th>Status</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -916,6 +916,23 @@ export function StockImportPage({
                               </td>
                               <td>
                                 <Input
+                                  className="stock-import-price-input"
+                                  min="0"
+                                  onChange={(event) =>
+                                    updateRow(
+                                      row.id,
+                                      "buyingPrice",
+                                      event.target.value,
+                                    )
+                                  }
+                                  step="0.01"
+                                  type="number"
+                                  value={row.buyingPrice}
+                                />
+                              </td>
+                              <td>
+                                <Input
+                                  className="stock-import-price-input"
                                   min="0"
                                   onChange={(event) =>
                                     updateRow(
@@ -938,11 +955,6 @@ export function StockImportPage({
                                   {confidenceLabel(row.suggestionConfidence)}
                                 </span>
                               </td>
-                              <td>
-                                <span className="status-pill archived">
-                                  {statusLabel(row.status)}
-                                </span>
-                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -963,7 +975,6 @@ export function StockImportPage({
                         <th>Selling Price</th>
                         <th>Lot Number</th>
                         <th>Expiration Date</th>
-                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1064,13 +1075,6 @@ export function StockImportPage({
                               type="date"
                               value={row.expirationDate}
                             />
-                          </td>
-                          <td>
-                            {row.status === "UNMATCHED" ? (
-                              <span className="muted-text">Review below</span>
-                            ) : (
-                              <span className="muted-text">Ready</span>
-                            )}
                           </td>
                         </tr>
                       ))}

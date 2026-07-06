@@ -120,6 +120,10 @@ export function StockInForm({
   const isEditing = Boolean(stockIn);
   const isManualStockIn = values.sourceType === "MANUAL" || isEditing;
   const entryMethod = values.sourceType === "MANUAL" ? "MANUAL" : "IMPORT";
+  const modalClassName =
+    entryMethod === "IMPORT"
+      ? "modal stock-in-modal stock-in-modal-wide"
+      : "modal stock-in-modal";
   const title = stockIn ? "Edit Stock In Draft" : "New Stock In";
 
   const updateValue = <TField extends keyof StockInFormValues>(
@@ -241,7 +245,7 @@ export function StockInForm({
       <section
         aria-labelledby="stock-in-form-title"
         aria-modal="true"
-        className="modal stock-in-modal"
+        className={modalClassName}
         role="dialog"
       >
         <div className="modal-header">

@@ -722,6 +722,11 @@ a {
   width: min(100%, 980px);
 }
 
+.stock-in-modal-wide {
+  max-width: 1400px;
+  width: min(95vw, 1400px);
+}
+
 .stock-in-header-grid,
 .stock-item-grid {
   display: grid;
@@ -1126,24 +1131,30 @@ a {
 }
 
 .stock-import-new-products-table {
-  min-width: 1480px;
+  min-width: 1360px;
 }
 
 .stock-import-table {
-  min-width: 1320px;
+  min-width: 1160px;
+}
+
+.stock-import-price-input {
+  max-width: 100px;
+  min-width: 90px;
+  width: 90px;
 }
 
 .stock-import-table .field {
-  min-width: 120px;
+  min-width: 110px;
 }
 
 .stock-import-product-cell {
-  min-width: 280px;
+  min-width: 260px;
   vertical-align: top;
 }
 
 .stock-import-raw-product-cell {
-  min-width: 210px;
+  min-width: 200px;
   vertical-align: top;
 }
 
