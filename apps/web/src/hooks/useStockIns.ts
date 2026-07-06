@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { apiGet, apiPost } from "../lib/api";
+import { apiDelete, apiGet, apiPatch, apiPost } from "../lib/api";
 import type { Category } from "../types/category";
 import type { Product, ProductPayload } from "../types/product";
 import type { CreateStockInPayload, StockIn } from "../types/stock-in";
@@ -44,6 +44,16 @@ export function useStockIns() {
     await loadStockIns();
   };
 
+  const updateStockIn = async (id: string, payload: CreateStockInPayload) => {
+    await apiPatch<StockIn>(`/stock-ins/${id}`, payload);
+    await loadStockIns();
+  };
+
+  const deleteStockIn = async (id: string) => {
+    await apiDelete<{ message: string }>(`/stock-ins/${id}`);
+    await loadStockIns();
+  };
+
   const createProduct = async (payload: ProductPayload) => {
     const product = await apiPost<Product>("/products", payload);
     await loadStockIns();
@@ -65,6 +75,8 @@ export function useStockIns() {
     reload: loadStockIns,
     getStockIn,
     createStockIn,
+    updateStockIn,
+    deleteStockIn,
     createProduct,
     postStockIn,
   };

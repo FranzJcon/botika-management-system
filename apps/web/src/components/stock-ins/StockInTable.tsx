@@ -8,6 +8,8 @@ import type { StockIn } from "../../types/stock-in";
 type StockInTableProps = {
   stockIns: StockIn[];
   onView: (stockIn: StockIn) => void;
+  onEdit: (stockIn: StockIn) => void;
+  onDelete: (stockIn: StockIn) => void;
   onPost: (stockIn: StockIn) => void;
 };
 
@@ -18,7 +20,13 @@ const formatDate = (value: string) =>
     day: "2-digit",
   }).format(new Date(value));
 
-export function StockInTable({ onPost, onView, stockIns }: StockInTableProps) {
+export function StockInTable({
+  onDelete,
+  onEdit,
+  onPost,
+  onView,
+  stockIns,
+}: StockInTableProps) {
   const columns: MasterDataColumn<StockIn>[] = [
     {
       header: "Received Date",
@@ -56,9 +64,17 @@ export function StockInTable({ onPost, onView, stockIns }: StockInTableProps) {
             View
           </Button>
           {stockIn.status === "DRAFT" ? (
-            <Button variant="secondary" onClick={() => onPost(stockIn)}>
-              Finalize Stock In
-            </Button>
+            <>
+              <Button variant="secondary" onClick={() => onEdit(stockIn)}>
+                Edit
+              </Button>
+              <Button variant="secondary" onClick={() => onDelete(stockIn)}>
+                Delete
+              </Button>
+              <Button variant="secondary" onClick={() => onPost(stockIn)}>
+                Finalize Stock In
+              </Button>
+            </>
           ) : null}
         </div>
       ),

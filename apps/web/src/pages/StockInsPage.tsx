@@ -5,6 +5,7 @@ import { MasterDataErrorState } from "../components/master-data/MasterDataErrorS
 import { MasterDataLoadingState } from "../components/master-data/MasterDataLoadingState";
 import { MasterDataPageHeader } from "../components/master-data/MasterDataPageHeader";
 import { MasterDataToolbar } from "../components/master-data/MasterDataToolbar";
+import { DeleteStockInDraftDialog } from "../components/stock-ins/DeleteStockInDraftDialog";
 import { PostStockInDialog } from "../components/stock-ins/PostStockInDialog";
 import { StockInDetailsDialog } from "../components/stock-ins/StockInDetailsDialog";
 import { StockInForm } from "../components/stock-ins/StockInForm";
@@ -19,6 +20,7 @@ export function StockInsPage() {
     createStockIn,
     createProduct,
     categories,
+    deleteStockIn,
     error,
     getStockIn,
     isLoading,
@@ -26,9 +28,12 @@ export function StockInsPage() {
     products,
     reload,
     stockIns,
+    updateStockIn,
   } = useStockIns();
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingStockIn, setEditingStockIn] = useState<StockIn | null>(null);
   const [selectedStockIn, setSelectedStockIn] = useState<StockIn | null>(null);
+  const [stockInToDelete, setStockInToDelete] = useState<StockIn | null>(null);
   const [stockInToPost, setStockInToPost] = useState<StockIn | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,17 +63,44 @@ export function StockInsPage() {
 
   const closeForm = () => {
     setIsFormOpen(false);
+    setEditingStockIn(null);
     setMutationError(null);
   };
 
-  const handleCreate = async (payload: CreateStockInPayload) => {
+  const openCreateForm = () => {
+    setMutationError(null);
+    setEditingStockIn(null);
+    setIsFormOpen(true);
+  };
+
+  const openEditForm = async (stockIn: StockIn) => {
+    setMutationError(null);
+
+    try {
+      const detail = await getStockIn(stockIn.id);
+      setEditingStockIn(detail);
+      setIsFormOpen(true);
+    } catch {
+      const message = "Unable to load stock in draft. Please try again.";
+      setMutationError(message);
+      showToast("error", message);
+    }
+  };
+
+  const handleSaveDraft = async (payload: CreateStockInPayload) => {
     setIsSubmitting(true);
     setMutationError(null);
 
     try {
-      await createStockIn(payload);
+      if (editingStockIn) {
+        await updateStockIn(editingStockIn.id, payload);
+        showToast("success", "Draft updated successfully.");
+      } else {
+        await createStockIn(payload);
+        showToast("success", "Stock in draft saved");
+      }
+
       closeForm();
-      showToast("success", "Stock in draft saved");
     } catch {
       const message = "Unable to save stock in draft. Please check the details.";
       setMutationError(message);
@@ -96,6 +128,37 @@ export function StockInsPage() {
     setMutationError(null);
   };
 
+  const openDeleteDialog = (stockIn: StockIn) => {
+    setMutationError(null);
+    setStockInToDelete(stockIn);
+  };
+
+  const closeDeleteDialog = () => {
+    setStockInToDelete(null);
+    setMutationError(null);
+  };
+
+  const handleDeleteDraft = async () => {
+    if (!stockInToDelete) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMutationError(null);
+
+    try {
+      await deleteStockIn(stockInToDelete.id);
+      closeDeleteDialog();
+      showToast("success", "Draft deleted successfully.");
+    } catch {
+      const message = "Unable to delete stock in draft. Please try again.";
+      setMutationError(message);
+      showToast("error", message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const openPostDialog = (stockIn: StockIn) => {
     setMutationError(null);
     setStockInToPost(stockIn);
@@ -117,7 +180,7 @@ export function StockInsPage() {
     try {
       await postStockIn(stockInToPost.id);
       closePostDialog();
-      showToast("success", "Stock in finalized");
+      showToast("success", "Stock In finalized successfully.");
     } catch {
       const message = "Unable to finalize stock in. Please try again.";
       setMutationError(message);
@@ -131,7 +194,7 @@ export function StockInsPage() {
     <section className="page">
       <MasterDataPageHeader
         actionLabel="+ New Stock In"
-        onAction={() => setIsFormOpen(true)}
+        onAction={openCreateForm}
         title="Stock In"
       />
 
@@ -154,6 +217,8 @@ export function StockInsPage() {
           <MasterDataEmptyState message="No stock-ins match your search." />
         ) : (
           <StockInTable
+            onDelete={openDeleteDialog}
+            onEdit={(stockIn) => void openEditForm(stockIn)}
             onPost={openPostDialog}
             onView={(stockIn) => void openDetails(stockIn)}
             stockIns={filteredStockIns}
@@ -161,7 +226,11 @@ export function StockInsPage() {
         )}
       </Card>
 
-      {mutationError && !isFormOpen && !selectedStockIn && !stockInToPost ? (
+      {mutationError &&
+      !isFormOpen &&
+      !selectedStockIn &&
+      !stockInToDelete &&
+      !stockInToPost ? (
         <Card className="state-panel error-state">{mutationError}</Card>
       ) : null}
 
@@ -172,8 +241,9 @@ export function StockInsPage() {
           isSubmitting={isSubmitting}
           onCreateProduct={createProduct}
           onClose={closeForm}
-          onSubmit={handleCreate}
+          onSubmit={handleSaveDraft}
           products={products}
+          stockIn={editingStockIn}
         />
       ) : null}
 
@@ -188,6 +258,16 @@ export function StockInsPage() {
           onCancel={closePostDialog}
           onConfirm={handlePost}
           stockIn={stockInToPost}
+        />
+      ) : null}
+
+      {stockInToDelete ? (
+        <DeleteStockInDraftDialog
+          error={mutationError}
+          isSubmitting={isSubmitting}
+          onCancel={closeDeleteDialog}
+          onConfirm={handleDeleteDraft}
+          stockIn={stockInToDelete}
         />
       ) : null}
     </section>

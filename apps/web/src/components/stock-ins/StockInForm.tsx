@@ -14,6 +14,7 @@ import type { Product } from "../../types/product";
 import type { ProductPayload } from "../../types/product";
 import type {
   CreateStockInPayload,
+  StockIn,
   StockInFormValues,
   StockInItemFormValues,
   StockInSourceType,
@@ -23,6 +24,7 @@ import type {
 type StockInFormProps = {
   products: Product[];
   categories: Category[];
+  stockIn?: StockIn | null;
   isSubmitting: boolean;
   error: string | null;
   onClose: () => void;
@@ -50,6 +52,30 @@ const initialValues = (): StockInFormValues => ({
   sourceType: "MANUAL",
   notes: "",
   items: [createItem()],
+});
+
+const dateInputValue = (value: string | null) =>
+  value ? new Date(value).toISOString().slice(0, 10) : "";
+
+const valuesFromStockIn = (stockIn: StockIn): StockInFormValues => ({
+  receivedDate: dateInputValue(stockIn.receivedDate),
+  referenceType: stockIn.referenceType ?? "",
+  referenceNumber: stockIn.referenceNumber ?? "",
+  sourceType: stockIn.sourceType,
+  notes: stockIn.notes ?? "",
+  items:
+    stockIn.items.length > 0
+      ? stockIn.items.map((item) => ({
+          id: item.id,
+          productId: item.productId,
+          quantity: String(item.quantity),
+          buyingPrice: String(item.buyingPrice),
+          sellingPrice: item.sellingPrice === null ? "" : String(item.sellingPrice),
+          expirationDate: dateInputValue(item.expirationDate),
+          lotNumber: item.lotNumber ?? "",
+          notes: item.notes ?? "",
+        }))
+      : [createItem()],
 });
 
 const optionalText = (value: string) => value.trim() || null;
@@ -92,8 +118,11 @@ export function StockInForm({
   onClose,
   onSubmit,
   products,
+  stockIn,
 }: StockInFormProps) {
-  const [values, setValues] = useState<StockInFormValues>(() => initialValues());
+  const [values, setValues] = useState<StockInFormValues>(() =>
+    stockIn ? valuesFromStockIn(stockIn) : initialValues(),
+  );
   const [initialSnapshot] = useState(() => JSON.stringify(values));
   const [validationError, setValidationError] = useState<string | null>(null);
   const [quickAddTarget, setQuickAddTarget] = useState<{
@@ -102,7 +131,9 @@ export function StockInForm({
   } | null>(null);
   const [quickAddError, setQuickAddError] = useState<string | null>(null);
   const [isQuickAdding, setIsQuickAdding] = useState(false);
-  const isManualStockIn = values.sourceType === "MANUAL";
+  const isEditing = Boolean(stockIn);
+  const isManualStockIn = values.sourceType === "MANUAL" || isEditing;
+  const title = stockIn ? "Edit Stock In Draft" : "New Stock In";
 
   const updateValue = <TField extends keyof StockInFormValues>(
     field: TField,
@@ -119,7 +150,9 @@ export function StockInForm({
   const handleClose = () => {
     if (
       hasUnsavedChanges &&
-      !window.confirm("Discard unsaved stock in draft?")
+      !window.confirm(
+        "Discard your changes?\n\nUnsaved changes will be lost.",
+      )
     ) {
       return;
     }
@@ -227,7 +260,7 @@ export function StockInForm({
         <div className="modal-header">
           <div>
             <p className="eyebrow">Stock In</p>
-            <h2 id="stock-in-form-title">New Stock In</h2>
+            <h2 id="stock-in-form-title">{title}</h2>
           </div>
           <Button variant="secondary" onClick={handleClose}>
             Close
