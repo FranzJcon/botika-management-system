@@ -57,7 +57,9 @@ export const createStockInSchema = z.object({
 });
 
 export const postStockInSchema = z.object({});
+export const updateStockInSchema = createStockInSchema;
 
 export type CreateStockInInput = z.infer<typeof createStockInSchema> & {
   receivedByUserId: string;
 };
+export type UpdateStockInInput = z.infer<typeof updateStockInSchema>;

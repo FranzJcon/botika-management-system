@@ -2,12 +2,18 @@ import type { Request, Response } from "express";
 
 import {
   createStockIn,
+  deleteDraftStockIn,
   getStockInById,
   getStockIns,
   postStockIn,
+  updateDraftStockIn,
   type StockInServiceError,
 } from "./stock-in.service";
-import { createStockInSchema, postStockInSchema } from "./stock-in.schemas";
+import {
+  createStockInSchema,
+  postStockInSchema,
+  updateStockInSchema,
+} from "./stock-in.schemas";
 
 const validationFailed = (res: Response) =>
   res.status(400).json({
@@ -22,6 +28,16 @@ const stockInNotFound = (res: Response) =>
 const stockInCannotBePosted = (res: Response) =>
   res.status(409).json({
     message: "Stock in cannot be posted",
+  });
+
+const stockInCannotBeUpdated = (res: Response) =>
+  res.status(409).json({
+    message: "Stock in cannot be updated",
+  });
+
+const stockInCannotBeDeleted = (res: Response) =>
+  res.status(409).json({
+    message: "Stock in cannot be deleted",
   });
 
 const stockInHasNoItems = (res: Response) =>
@@ -42,6 +58,14 @@ const sendServiceError = (res: Response, error: StockInServiceError) => {
 
   if (error === "STOCK_IN_CANNOT_BE_POSTED") {
     return stockInCannotBePosted(res);
+  }
+
+  if (error === "STOCK_IN_CANNOT_BE_UPDATED") {
+    return stockInCannotBeUpdated(res);
+  }
+
+  if (error === "STOCK_IN_CANNOT_BE_DELETED") {
+    return stockInCannotBeDeleted(res);
   }
 
   if (error === "STOCK_IN_HAS_NO_ITEMS") {
@@ -88,6 +112,40 @@ export const createStockInHandler = async (req: Request, res: Response) => {
   }
 
   return res.status(201).json(stockIn.data);
+};
+
+export const updateStockInHandler = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const result = updateStockInSchema.safeParse(req.body);
+
+  if (!result.success) {
+    return validationFailed(res);
+  }
+
+  const stockIn = await updateDraftStockIn(getIdParam(req), result.data);
+
+  if (stockIn.error) {
+    return sendServiceError(res, stockIn.error);
+  }
+
+  return res.json(stockIn.data);
+};
+
+export const deleteStockInHandler = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const result = await deleteDraftStockIn(getIdParam(req));
+
+  if (result.error) {
+    return sendServiceError(res, result.error);
+  }
+
+  return res.json(result.data);
 };
 
 export const postStockInHandler = async (req: Request, res: Response) => {
